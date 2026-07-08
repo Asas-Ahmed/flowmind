@@ -1,26 +1,269 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(148, 163, 184, 0.22);
+  --glass-shadow: rgba(15, 23, 42, 0.08);
+  --grid-line: rgba(15, 23, 42, 0.045);
+  --selection-bg: rgba(74, 109, 237, 0.22);
+  --selection-text: #0f172a;
+}
+
+html.dark {
+  --background: #050816;
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(148, 163, 184, 0.18);
+  --glass-shadow: rgba(0, 0, 0, 0.28);
+  --grid-line: rgba(248, 250, 252, 0.055);
+  --selection-bg: rgba(59, 242, 253, 0.22);
+  --selection-text: #f8fafc;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-logo: var(--font-logo);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+section[id] {
+  scroll-margin-top: 96px;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+body,
+.nav-surface,
+.surface-soft,
+.glass-card {
+  transition:
+    background 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.aurora-gradient {
+  background: linear-gradient(135deg, #4a6ded 0%, #762bbc 52%, #cf4de1 100%);
+}
+
+.aurora-text {
+  background: linear-gradient(135deg, #2563eb 0%, #762bbc 45%, #cf4de1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 24px 80px var(--glass-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.soft-grid {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 42px 42px;
+}
+
+.text-app {
+  color: var(--foreground);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.surface-soft {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(226, 232, 240, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .surface-soft {
+  background: rgba(15, 23, 42, 0.58);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.nav-surface {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .nav-surface {
+  background: rgba(15, 23, 42, 0.72);
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+.reveal-soft {
+  opacity: 0;
+  transform: translateY(18px);
+  animation: revealSoft 620ms ease forwards;
+}
+
+.reveal-scale {
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  animation: revealScale 620ms ease forwards;
+}
+
+.hover-lift {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .float-slow {
+    animation: floatSlow 7s ease-in-out infinite;
+  }
+
+  .pulse-soft {
+    animation: pulseSoft 2.8s ease-in-out infinite;
+  }
+
+  .animate-flowmind-float {
+    animation: flowmindLogoFloat 4.8s ease-in-out infinite;
+  }
+
+  .animate-flowmind-pulse {
+    animation: flowmindLogoPulse 2.8s ease-in-out infinite;
+  }
+
+  .animate-flowmind-glow {
+    animation: flowmindLogoGlow 3s ease-in-out infinite;
+  }
+
+  .animate-flowmind-loading {
+    animation: flowmindLoading 1.45s ease-in-out infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+@keyframes revealSoft {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes revealScale {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes floatSlow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulseSoft {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 242, 253, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 0 12px rgba(59, 242, 253, 0);
+  }
+}
+
+@keyframes flowmindLogoFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-6px) scale(1.025);
+  }
+}
+
+@keyframes flowmindLogoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 16px rgba(34, 211, 238, 0.28));
+  }
+
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 30px rgba(217, 70, 239, 0.38));
+  }
+}
+
+@keyframes flowmindLogoGlow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.26));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 22px rgba(56, 189, 248, 0.32))
+      drop-shadow(0 0 32px rgba(217, 70, 239, 0.24));
+  }
+}
+
+@keyframes flowmindLoading {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(220%);
+  }
 }
