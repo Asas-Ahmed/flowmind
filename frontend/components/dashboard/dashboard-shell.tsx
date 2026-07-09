@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
+import { logoutUser } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -121,8 +124,24 @@ const assistantTips = [
 const LOADER_KEY = "flowmind-dashboard-loader-seen";
 
 export function DashboardShell() {
+  const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } finally {
+      document.cookie =
+        "flowmind_access_token=; path=/; max-age=0; SameSite=Lax";
+      document.cookie =
+        "flowmind_refresh_token=; path=/; max-age=0; SameSite=Lax";
+
+      sessionStorage.removeItem(LOADER_KEY);
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -237,6 +256,15 @@ export function DashboardShell() {
                 >
                   <Bell className="h-5 w-5" />
                   <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-cyan-400" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="hidden h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:text-rose-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:text-rose-300 sm:flex"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
                 </button>
 
                 <ThemeToggle />

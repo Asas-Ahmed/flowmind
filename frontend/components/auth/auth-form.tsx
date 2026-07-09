@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { loginUser, registerUser } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import {
@@ -52,7 +53,7 @@ const authCopy = {
       "Continue your productivity flow with tasks, habits, focus sessions, and smart insights.",
     button: "Sign in",
     loading: "Signing in...",
-    success: "Login UI validated. Opening dashboard preview...",
+    success: "Signed in successfully. Opening your dashboard...",
     footerText: "New to FlowMind?",
     footerLink: "Create an account",
     footerHref: "/register",
@@ -64,7 +65,7 @@ const authCopy = {
       "Build a calmer workspace for planning, deep work, habits, and productivity insights.",
     button: "Create account",
     loading: "Creating account...",
-    success: "Account UI validated. Backend connection comes later.",
+    success: "Account created successfully. Opening your dashboard...",
     footerText: "Already have an account?",
     footerLink: "Sign in",
     footerHref: "/login",
@@ -178,7 +179,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validateForm()) return;
@@ -186,16 +187,35 @@ export function AuthForm({ mode }: AuthFormProps) {
     setIsLoading(true);
     setSuccessMessage("");
 
-    window.setTimeout(() => {
-      setIsLoading(false);
-      setSuccessMessage(copy.success);
-
-      if (mode === "login") {
-        window.setTimeout(() => {
-          router.push("/dashboard");
-        }, 650);
+    try {
+      if (mode === "forgot") {
+        setSuccessMessage(
+          "Password reset is not connected yet. Email service will be added later.",
+        );
+        return;
       }
-    }, 850);
+
+      if (mode === "register") {
+        await registerUser(form.fullName.trim(), form.email, form.password);
+      }
+
+      await loginUser(form.email, form.password);
+
+      setSuccessMessage(copy.success);
+      router.push("/dashboard");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Authentication failed. Please try again.";
+
+      setErrors((current) => ({
+        ...current,
+        email: message,
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -335,7 +355,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                       onChange={(event) =>
                         updateField("fullName", event.target.value)
                       }
-                      placeholder="Asas Ahmed"
+                      placeholder="John Doe"
                       className="auth-input"
                       autoComplete="name"
                     />
@@ -505,8 +525,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             </div>
 
             <p className="mt-5 text-center text-xs leading-6 text-slate-500 dark:text-slate-400">
-              UI-only authentication for now. No real account is created until
-              backend auth is connected.
+              Secure JWT authentication connected through httpOnly cookies.
             </p>
           </div>
         </section>
