@@ -267,3 +267,19 @@ html.dark .nav-surface {
     transform: translateX(220%);
   }
 }
+
+.auth-input {
+  width: 100%;
+  background: transparent;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  outline: none;
+}
+
+.auth-input::placeholder {
+  color: #94a3b8;
+}
+
+html.dark .auth-input::placeholder {
+  color: #64748b;
+}

@@ -35,7 +35,7 @@ export function Navbar() {
         <div className="hidden items-center gap-3 md:flex">
           <ThemeToggle />
 
-          <a href="#" className={buttonStyles({ variant: "ghost", size: "sm" })}>
+          <a href="/login" className={buttonStyles({ variant: "ghost", size: "sm" })}>
             Sign in
           </a>
 
