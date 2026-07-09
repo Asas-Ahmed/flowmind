@@ -39,7 +39,7 @@ export function Navbar() {
             Sign in
           </a>
 
-          <a href="#" className={buttonStyles({ variant: "dark", size: "md" })}>
+          <a href="/dashboard" className={buttonStyles({ variant: "dark", size: "md" })}>
             Get Started
           </a>
         </div>
@@ -73,7 +73,7 @@ export function Navbar() {
             ))}
 
             <a
-              href="#"
+              href="/dashboard"
               className="mt-2 rounded-full bg-slate-950 px-5 py-3 text-center font-bold text-white dark:bg-white dark:text-slate-950"
             >
               Get Started
