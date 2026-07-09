@@ -66,7 +66,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsOpen(false)}
-                className="rounded-2xl px-4 py-3 transition hover:bg-white/50 hover:text-indigo-600 dark:hover:bg-white/10"
+                className="rounded-2xl px-4 py-3 transition hover:bg-white/50 hover:text-indigo-600 dark:hover:text-cyan-300 dark:hover:bg-white/10"
               >
                 {link.label}
               </a>

@@ -1,18 +1,18 @@
 const plans = [
   {
     name: "Free",
-    price: "$0",
+    oldPrice: "$0",
     description: "For getting started with tasks, habits, and focus.",
   },
   {
     name: "Student",
-    price: "$4",
+    oldPrice: "$4",
     description: "For students managing assignments, routines, and deadlines.",
     highlighted: true,
   },
   {
     name: "Pro",
-    price: "$8",
+    oldPrice: "$8",
     description: "For professionals who want deeper insights and planning.",
   },
 ];
@@ -25,12 +25,16 @@ export function Pricing() {
     >
       <div className="mx-auto max-w-3xl text-center">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-indigo-600 dark:text-cyan-300">
-          Simple plans
+          Initial release offer
         </p>
 
         <h2 className="text-app mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-          Built for students and professionals.
+          Full access is free for the first 2 months.
         </h2>
+
+        <p className="mt-5 text-sm leading-6 text-muted">
+          All premium features are unlocked during the launch period.
+        </p>
       </div>
 
       <div className="mt-14 grid gap-5 md:grid-cols-3">
@@ -45,7 +49,20 @@ export function Pricing() {
             style={{ animationDelay: `${index * 90}ms` }}
           >
             <h3 className="text-2xl font-black">{plan.name}</h3>
-            <p className="mt-4 text-5xl font-black">{plan.price}</p>
+
+            <div className="mt-4 flex items-end gap-3">
+              <p
+                className={
+                  plan.highlighted
+                    ? "text-4xl font-black text-white/60 line-through decoration-2"
+                    : "text-4xl font-black text-muted line-through decoration-2"
+                }
+              >
+                {plan.oldPrice}
+              </p>
+
+              <p className="text-2xl font-black">Free</p>
+            </div>
 
             <p
               className={
@@ -57,16 +74,18 @@ export function Pricing() {
               {plan.description}
             </p>
 
-            <a
-              href="#"
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
               className={
                 plan.highlighted
-                  ? "mt-7 inline-flex w-full justify-center rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5"
-                  : "mt-7 inline-flex w-full justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
+                  ? "mt-7 inline-flex w-full cursor-not-allowed justify-center rounded-full bg-white/80 px-5 py-3 text-sm font-bold text-slate-950 opacity-80"
+                  : "mt-7 inline-flex w-full cursor-not-allowed justify-center rounded-full bg-slate-950/80 px-5 py-3 text-sm font-bold text-white opacity-80 dark:bg-white/80 dark:text-slate-950"
               }
             >
-              Choose Plan
-            </a>
+              Full Access for 2 Months
+            </button>
           </article>
         ))}
       </div>
