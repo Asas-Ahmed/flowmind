@@ -1,10 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 
-from app.database.database import Base, engine, get_db
-from app.models.note import Note
-from app.schemas.note_schema import NoteCreate, NoteResponse
+from app.api.auth import router as auth_router
+from app.database.database import Base, engine
+from app.models.user import User
 
 Base.metadata.create_all(bind=engine)
 
@@ -18,21 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
+
 
 @app.get("/")
 def root():
     return {"message": "FlowMind API is running"}
 
 
-@app.get("/api/notes", response_model=list[NoteResponse])
-def get_notes(db: Session = Depends(get_db)):
-    return db.query(Note).all()
-
-
-@app.post("/api/notes", response_model=NoteResponse)
-def create_note(note: NoteCreate, db: Session = Depends(get_db)):
-    new_note = Note(text=note.text)
-    db.add(new_note)
-    db.commit()
-    db.refresh(new_note)
-    return new_note
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "service": "FlowMind API"}
