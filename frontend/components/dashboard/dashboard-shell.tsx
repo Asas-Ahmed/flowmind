@@ -261,10 +261,11 @@ export function DashboardShell() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="hidden h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:text-rose-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:text-rose-300 sm:flex"
+                  aria-label="Logout"
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 text-slate-600 transition hover:text-rose-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:text-rose-300 sm:w-auto sm:px-4"
                 >
                   <LogOut className="h-4 w-4" />
-                  Logout
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
 
                 <ThemeToggle />
