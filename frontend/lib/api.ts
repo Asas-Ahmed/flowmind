@@ -82,6 +82,7 @@ export type UserResponse = {
   email: string;
   is_active: boolean;
   is_admin: boolean;
+  is_email_verified: boolean;
   created_at: string;
 };
 
@@ -93,7 +94,7 @@ export function loginUser(email: string, password: string) {
 }
 
 export function registerUser(fullName: string, email: string, password: string) {
-  return apiRequest<UserResponse>("/api/auth/register", {
+  return apiRequest<MessageResponse>("/api/auth/register", {
     method: "POST",
     body: JSON.stringify({
       full_name: fullName,
@@ -135,6 +136,22 @@ export function resetPassword(token: string, newPassword: string) {
       token,
       new_password: newPassword,
     }),
+    skipRefreshRetry: true,
+  });
+}
+
+export function verifyEmail(token: string) {
+  return apiRequest<MessageResponse>("/api/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+    skipRefreshRetry: true,
+  });
+}
+
+export function resendVerificationEmail(email: string) {
+  return apiRequest<MessageResponse>("/api/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
     skipRefreshRetry: true,
   });
 }

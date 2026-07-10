@@ -15,6 +15,8 @@ from app.schemas.auth_schema import (
     UserLogin,
     UserRegister,
     UserResponse,
+    ResendVerificationRequest,
+    VerifyEmailRequest,
 )
 from app.services.auth_service import (
     login_user,
@@ -22,6 +24,8 @@ from app.services.auth_service import (
     register_user,
     request_password_reset,
     reset_user_password,
+    resend_user_verification,
+    verify_user_email,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -33,8 +37,11 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_ATTEMPTS = 5
 
-rate_limit_store: dict[str, list[float]] = defaultdict(list)
+EMAIL_RATE_LIMIT_WINDOW_SECONDS = 60 * 15
+EMAIL_RATE_LIMIT_MAX_ATTEMPTS = 3
 
+rate_limit_store: dict[str, list[float]] = defaultdict(list)
+email_rate_limit_store: dict[str, list[float]] = defaultdict(list)
 
 def get_client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("x-forwarded-for")
@@ -63,6 +70,32 @@ def check_auth_rate_limit(request: Request) -> None:
         )
 
     rate_limit_store[client_ip].append(now)
+
+def check_email_rate_limit(request: Request) -> None:
+    client_ip = get_client_ip(request)
+    now = time.time()
+
+    attempts = email_rate_limit_store[client_ip]
+
+    email_rate_limit_store[client_ip] = [
+        timestamp
+        for timestamp in attempts
+        if now - timestamp < EMAIL_RATE_LIMIT_WINDOW_SECONDS
+    ]
+
+    if (
+        len(email_rate_limit_store[client_ip])
+        >= EMAIL_RATE_LIMIT_MAX_ATTEMPTS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=(
+                "Too many email requests. "
+                "Please try again in 15 minutes."
+            ),
+        )
+
+    email_rate_limit_store[client_ip].append(now)
 
 def set_auth_cookies(response: Response, token_data: TokenResponse) -> None:
     response.set_cookie(
@@ -142,23 +175,108 @@ def get_current_user(
 
     user = get_user_by_id(db, int(user_id))
 
-    if not user or not user.is_active:
+    if (
+        not user
+        or not user.is_active
+        or not user.is_email_verified
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found or inactive",
+            detail="User not found, inactive, or unverified",
         )
 
     return user
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=MessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 def register(
     user_data: UserRegister,
     request: Request,
     db: Session = Depends(get_db),
 ):
     check_auth_rate_limit(request)
-    return register_user(db, user_data)
+
+    try:
+        register_user(db, user_data)
+    except HTTPException:
+        raise
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email service is not configured",
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to send verification email right now",
+        ) from error
+
+    return {
+        "message": (
+            "Account created. Check your email and verify your "
+            "address before signing in."
+        )
+    }
+
+@router.post(
+    "/verify-email",
+    response_model=MessageResponse,
+)
+def verify_email(
+    verification_data: VerifyEmailRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_auth_rate_limit(request)
+    verify_user_email(db, verification_data)
+
+    return {
+        "message": (
+            "Your email has been verified successfully. "
+            "You can now sign in."
+        )
+    }
+
+
+@router.post(
+    "/resend-verification",
+    response_model=MessageResponse,
+)
+def resend_verification(
+    verification_request: ResendVerificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_email_rate_limit(request)
+
+    try:
+        resend_user_verification(
+            db=db,
+            email=verification_request.email,
+        )
+    except HTTPException:
+        raise
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email service is not configured",
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to send verification email right now",
+        ) from error
+
+    return {
+        "message": (
+            "If an unverified account exists for that email, "
+            "a new verification link has been sent."
+        )
+    }
 
 @router.post("/login", response_model=TokenResponse)
 def login(
@@ -183,7 +301,7 @@ def forgot_password(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    check_auth_rate_limit(request)
+    check_email_rate_limit(request)
 
     try:
         request_password_reset(

@@ -69,7 +69,8 @@ const authCopy = {
       "Build a calmer workspace for planning, deep work, habits, and productivity insights.",
     button: "Create account",
     loading: "Creating account...",
-    success: "Account created successfully. Opening your dashboard...",
+    success:
+      "Account created. Check your email and verify it before signing in.",
     footerText: "Already have an account?",
     footerLink: "Sign in",
     footerHref: "/login",
@@ -204,7 +205,21 @@ export function AuthForm({ mode }: AuthFormProps) {
       }
 
       if (mode === "register") {
-        await registerUser(form.fullName.trim(), form.email, form.password);
+        const normalizedEmail = form.email.trim().toLowerCase();
+
+        const response = await registerUser(
+          form.fullName.trim(),
+          normalizedEmail,
+          form.password,
+        );
+
+        setSuccessMessage(response.message);
+
+        router.push(
+          `/verify-email?email=${encodeURIComponent(normalizedEmail)}`,
+        );
+
+        return;
       }
 
       await loginUser(form.email, form.password);
