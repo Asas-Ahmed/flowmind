@@ -115,3 +115,26 @@ export function logoutUser() {
     skipRefreshRetry: true,
   });
 }
+
+export type MessageResponse = {
+  message: string;
+};
+
+export function requestPasswordReset(email: string) {
+  return apiRequest<MessageResponse>("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    skipRefreshRetry: true,
+  });
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return apiRequest<MessageResponse>("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({
+      token,
+      new_password: newPassword,
+    }),
+    skipRefreshRetry: true,
+  });
+}

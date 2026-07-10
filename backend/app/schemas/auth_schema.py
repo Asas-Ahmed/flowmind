@@ -38,6 +38,33 @@ class UserLogin(BaseModel):
     def normalize_email(cls, value: str) -> str:
         return value.strip().lower()
 
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=255)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=72)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, value: str) -> str:
+        if not any(char.isalpha() for char in value):
+            raise ValueError("Password must contain at least one letter")
+
+        if not any(char.isdigit() for char in value):
+            raise ValueError("Password must contain at least one number")
+
+        return value
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 class TokenRefreshRequest(BaseModel):
     refresh_token: str

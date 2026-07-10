@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { loginUser, registerUser } from "@/lib/api";
+import {
+  loginUser,
+  registerUser,
+  requestPasswordReset,
+} from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import {
@@ -74,10 +78,11 @@ const authCopy = {
     eyebrow: "Reset access",
     title: "Forgot your password?",
     description:
-      "Enter your email and we will prepare the reset flow UI. Email sending will connect later.",
+      "Enter your account email and we will send you a secure password reset link.",
     button: "Send reset link",
-    loading: "Preparing reset link...",
-    success: "Reset password UI validated. Email service comes later.",
+    loading: "Sending reset link...",
+    success:
+      "If an account exists for this email, a password reset link has been sent.",
     footerText: "Remembered your password?",
     footerLink: "Back to login",
     footerHref: "/login",
@@ -97,7 +102,7 @@ const benefits = [
   },
   {
     title: "Secure foundation",
-    description: "Ready for JWT authentication when backend starts.",
+    description: "Protected by JWT sessions and secure password hashing.",
     icon: ShieldCheck,
   },
 ];
@@ -189,9 +194,12 @@ export function AuthForm({ mode }: AuthFormProps) {
 
     try {
       if (mode === "forgot") {
-        setSuccessMessage(
-          "Password reset is not connected yet. Email service will be added later.",
+        const response = await requestPasswordReset(
+          form.email.trim().toLowerCase(),
         );
+
+        setSuccessMessage(response.message);
+        setForm(initialFormState);
         return;
       }
 
@@ -255,9 +263,8 @@ export function AuthForm({ mode }: AuthFormProps) {
               </h1>
 
               <p className="mt-5 max-w-lg text-base leading-8 text-slate-600 dark:text-slate-300">
-                This is the polished authentication UI layer. Backend JWT,
-                database users, and real email reset will connect later without
-                redesigning these screens.
+                Secure authentication with protected sessions, password hashing,
+                refresh tokens, and email-based password recovery.
               </p>
             </div>
 

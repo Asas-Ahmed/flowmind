@@ -8,12 +8,21 @@ from app.database.database import get_db
 from app.models.user import User
 from app.repositories.user_repo import get_user_by_id
 from app.schemas.auth_schema import (
+    ForgotPasswordRequest,
+    MessageResponse,
+    ResetPasswordRequest,
     TokenResponse,
     UserLogin,
     UserRegister,
     UserResponse,
 )
-from app.services.auth_service import login_user, refresh_access_token, register_user
+from app.services.auth_service import (
+    login_user,
+    refresh_access_token,
+    register_user,
+    request_password_reset,
+    reset_user_password,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -165,6 +174,59 @@ def login(
 
     return token_data
 
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+)
+def forgot_password(
+    reset_request: ForgotPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_auth_rate_limit(request)
+
+    try:
+        request_password_reset(
+            db=db,
+            email=reset_request.email,
+        )
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Email service is not configured",
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Unable to send password reset email right now",
+        ) from error
+
+    return {
+        "message": (
+            "If an account exists for that email, "
+            "a password reset link has been sent."
+        )
+    }
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+)
+def reset_password(
+    reset_data: ResetPasswordRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    check_auth_rate_limit(request)
+    reset_user_password(db, reset_data)
+
+    return {
+        "message": (
+            "Your password has been reset successfully. "
+            "You can now sign in."
+        )
+    }
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh_token(
