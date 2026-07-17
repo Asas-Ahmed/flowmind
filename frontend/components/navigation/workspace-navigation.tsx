@@ -8,11 +8,13 @@ import {
   Flame,
   LayoutDashboard,
   ListTodo,
+  MoreHorizontal,
   Settings,
   Timer,
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 
@@ -65,8 +67,8 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: "Schedule",
+    href: "/schedule",
     icon: CalendarDays,
-    comingSoon: true,
   },
   {
     label: "Analytics",
@@ -107,74 +109,179 @@ export function WorkspaceNavigation({
 }: WorkspaceNavigationProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   if (variant === "mobile") {
-    const mobileItems = navigationItems.filter((item) => item.mobile);
+    const primaryItems = navigationItems.filter(
+      (item) => item.mobile && item.label !== "Flow Assistant",
+    );
+    const moreItems = navigationItems.filter((item) =>
+      ["Schedule", "Analytics", "Flow Assistant", "Settings"].includes(
+        item.label,
+      ),
+    );
+    const moreActive = moreItems.some((item) =>
+      isActiveRoute(pathname, item.href),
+    );
+
+    const navigateTo = (href?: string) => {
+      if (!href) return;
+      setMoreOpen(false);
+      router.push(href);
+    };
 
     return (
-      <nav
-        aria-label="Mobile workspace navigation"
-        className={`fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[#0b0f19] dark:shadow-black/40 xl:hidden ${className}`}
-      >
-        {mobileItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActiveRoute(pathname, item.href);
-
-          return (
+      <>
+        {moreOpen && (
+          <div className="fixed inset-0 z-[60] xl:hidden">
             <button
-              key={item.label}
               type="button"
-              disabled={!item.href}
-              onClick={() => {
-                if (item.href) {
-                  router.push(item.href);
-                }
-              }}
-              aria-current={active ? "page" : undefined}
-              aria-label={
-                item.comingSoon ? `${item.label}, coming soon` : item.label
-              }
-              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-1 py-2.5 text-[10px] font-semibold transition-colors duration-200 sm:text-xs ${
-                active
-                  ? "text-white"
-                  : item.href
-                    ? "text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
-                    : "cursor-default text-slate-300 dark:text-slate-700"
-              }`}
+              aria-label="Close tools menu"
+              onClick={() => setMoreOpen(false)}
+              className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 24, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="absolute inset-x-3 bottom-[92px] overflow-hidden rounded-[26px] border border-slate-200/80 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[#0b0f19] dark:shadow-black/60"
             >
-              {active && (
-                <motion.span
-                  layoutId="workspace-mobile-active"
-                  transition={{
-                    type: "spring",
-                    stiffness: 420,
-                    damping: 34,
-                  }}
-                  className="absolute inset-0 rounded-xl bg-slate-950 shadow-sm dark:bg-slate-100"
-                />
-              )}
+              <div className="flex items-center justify-between px-2 pb-3 pt-1">
+                <div>
+                  <p className="text-sm font-bold text-slate-950 dark:text-white">
+                    More tools
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    Open the rest of your FlowMind workspace.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen(false)}
+                  className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/[0.06] dark:hover:text-white"
+                  aria-label="Close tools menu"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </div>
 
-              <Icon
-                className={`relative z-10 h-5 w-5 shrink-0 ${
-                  active ? "dark:text-slate-950" : ""
-                }`}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                {moreItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = isActiveRoute(pathname, item.href);
 
-              <span
-                className={`relative z-10 max-w-full truncate ${
-                  active ? "dark:text-slate-950" : ""
+                  return (
+                    <button
+                      key={item.label}
+                      type="button"
+                      disabled={!item.href}
+                      onClick={() => navigateTo(item.href)}
+                      className="relative flex min-h-[88px] items-start gap-3 rounded-2xl p-3 text-left transition"
+                    >
+                      <span
+                        className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-xl ${
+                          active
+                            ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
+                            : item.href
+                              ? "bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-300"
+                              : "bg-slate-100/60 text-slate-300 dark:bg-white/[0.025] dark:text-slate-700"
+                        }`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <span className="relative z-10 min-w-0 pt-0.5">
+                        <span
+                          className={`block truncate text-sm font-bold ${
+                            item.href
+                              ? "text-slate-800 dark:text-slate-100"
+                              : "text-slate-300 dark:text-slate-600"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          {item.comingSoon ? "Coming soon" : "Open tool"}
+                        </span>
+                      </span>
+                      <span
+                        className={`pointer-events-none absolute inset-0 rounded-2xl border ${
+                          active
+                            ? "border-blue-300 bg-blue-50/50 dark:border-blue-400/25 dark:bg-blue-400/[0.07]"
+                            : item.href
+                              ? "border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:border-white/[0.08] dark:hover:border-white/[0.14] dark:hover:bg-white/[0.035]"
+                              : "border-slate-100 dark:border-white/[0.04]"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        <nav
+          aria-label="Mobile workspace navigation"
+          className={`fixed inset-x-3 bottom-3 z-[70] grid grid-cols-5 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[#0b0f19] dark:shadow-black/40 xl:hidden ${className}`}
+        >
+          {primaryItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActiveRoute(pathname, item.href);
+
+            return (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => navigateTo(item.href)}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-1 py-2.5 text-[10px] font-semibold transition-colors duration-200 sm:text-xs ${
+                  active
+                    ? "text-white"
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
                 }`}
               >
-                {item.mobileLabel ?? item.label}
-              </span>
+                {active && (
+                  <motion.span
+                    layoutId="workspace-mobile-active"
+                    transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    className="absolute inset-0 rounded-xl bg-slate-950 shadow-sm dark:bg-slate-100"
+                  />
+                )}
+                <Icon className={`relative z-10 h-5 w-5 ${active ? "dark:text-slate-950" : ""}`} />
+                <span className={`relative z-10 max-w-full truncate ${active ? "dark:text-slate-950" : ""}`}>
+                  {item.mobileLabel ?? item.label}
+                </span>
+              </button>
+            );
+          })}
 
-              {item.comingSoon && !active && (
-                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+            aria-label="Open more FlowMind tools"
+            className={`relative flex min-w-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl px-1 py-2.5 text-[10px] font-semibold transition-colors duration-200 sm:text-xs ${
+              moreOpen || moreActive
+                ? "text-white"
+                : "text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
+            }`}
+          >
+            {(moreOpen || moreActive) && (
+              <motion.span
+                layoutId="workspace-mobile-active"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                className="absolute inset-0 rounded-xl bg-slate-950 shadow-sm dark:bg-slate-100"
+              />
+            )}
+            <MoreHorizontal className={`relative z-10 h-5 w-5 ${(moreOpen || moreActive) ? "dark:text-slate-950" : ""}`} />
+            <span className={`relative z-10 ${(moreOpen || moreActive) ? "dark:text-slate-950" : ""}`}>
+              More
+            </span>
+          </button>
+        </nav>
+      </>
     );
   }
 

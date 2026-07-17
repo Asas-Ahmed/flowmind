@@ -10,8 +10,10 @@ from app.models.user_profile import UserProfile
 from app.models.task import Task, TaskCategory, TaskList
 from app.api.habits import router as habits_router
 from app.api.focus import router as focus_router
+from app.api.schedule import router as schedule_router
 from app.models.habit import Habit, HabitCompletion
 from app.models.focus_session import FocusSession
+from app.models.schedule_event import ScheduleEvent
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,6 +35,7 @@ app.include_router(profile_router)
 app.include_router(tasks_router)
 app.include_router(habits_router)
 app.include_router(focus_router)
+app.include_router(schedule_router)
 
 @app.get("/")
 def root():

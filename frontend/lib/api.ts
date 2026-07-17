@@ -19,6 +19,12 @@ import type {
   FocusWorkspace,
 } from "@/types/focus";
 
+import type {
+  ScheduleEvent,
+  ScheduleEventPayload,
+  ScheduleWorkspace,
+} from "@/types/schedule";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -360,6 +366,37 @@ export function cancelFocusSession(
 
 export function deleteFocusSession(sessionId: number) {
   return apiRequest<void>(`/api/focus/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export function getScheduleWorkspace(rangeStart: string, rangeEnd: string) {
+  const query = new URLSearchParams({ range_start: rangeStart, range_end: rangeEnd });
+  return apiRequest<ScheduleWorkspace>(`/api/schedule/workspace?${query.toString()}`, {
+    method: "GET",
+  });
+}
+
+export function createScheduleEvent(payload: ScheduleEventPayload) {
+  return apiRequest<ScheduleEvent>("/api/schedule/events", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateScheduleEvent(
+  eventId: number,
+  payload: Partial<ScheduleEventPayload>,
+) {
+  return apiRequest<ScheduleEvent>(`/api/schedule/events/${eventId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteScheduleEvent(eventId: number) {
+  return apiRequest<void>(`/api/schedule/events/${eventId}`, {
     method: "DELETE",
   });
 }

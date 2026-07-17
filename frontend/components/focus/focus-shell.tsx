@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   BarChart3,
   CheckCircle2,
@@ -283,7 +284,15 @@ export function FocusShell() {
         insightValue={workspace ? `${workspace.current_streak} day streak` : "Ready"}
       />
 
-      <main className="min-h-screen xl:pl-[272px]">
+      <motion.main
+        initial={{ opacity: 0 }} 
+        animate={{ opacity: 1 }} 
+        transition={{ 
+          duration: 0.22, 
+          ease: "easeOut", 
+          }} 
+        className="min-h-screen xl:pl-[272px]"
+      >
         <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f5f7fb]/90 px-4 py-4 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#050711]/85 sm:px-6 xl:px-8">
           <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4">
             <div>
@@ -391,7 +400,7 @@ export function FocusShell() {
             </div>
           </section>
         </div>
-      </main>
+      </motion.main>
 
       <WorkspaceNavigation variant="mobile" />
     </div>
