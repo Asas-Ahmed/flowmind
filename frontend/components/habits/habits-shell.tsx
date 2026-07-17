@@ -15,9 +15,7 @@ import {
   Flame,
   HeartPulse,
   Leaf,
-  LayoutDashboard,
   LoaderCircle,
-  Menu,
   Pencil,
   Plus,
   Search,
@@ -28,8 +26,8 @@ import {
   X,
 } from "lucide-react";
 
-import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 import { SpinnerLoader } from "@/components/common/spinner-loader";
+import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   checkInHabit,
@@ -102,7 +100,6 @@ export function HabitsShell() {
   const [categoryFilter, setCategoryFilter] = useState<"all" | HabitCategory>("all");
   const [showCompleted, setShowCompleted] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [form, setForm] = useState<HabitPayload>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -259,20 +256,12 @@ export function HabitsShell() {
     : 0;
 
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#f6f7fb] text-slate-950 dark:bg-[#050712] dark:text-slate-50">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,109,237,0.14),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(207,77,225,0.12),transparent_28%),linear-gradient(to_bottom,transparent,rgba(255,255,255,0.18))] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,242,253,0.08),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(189,67,254,0.11),transparent_30%)]" />
       <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(15,23,42,.7)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,.7)_1px,transparent_1px)] [background-size:44px_44px] dark:opacity-[0.045]" />
 
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/78 shadow-sm shadow-slate-900/[0.025] backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/78 dark:shadow-black/10">
-        <div className="mx-auto flex max-w-[1680px] items-center gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="rounded-2xl border border-slate-200/80 bg-white/80 p-2.5 shadow-sm transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 lg:hidden"
-            aria-label="Open navigation"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+        <div className="mx-auto flex max-w-[1720px] items-center gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
@@ -297,69 +286,64 @@ export function HabitsShell() {
         </div>
       </header>
 
-      <div className="relative mx-auto grid max-w-[1680px] gap-6 px-4 py-6 sm:px-6 xl:grid-cols-[278px_minmax(0,1fr)] xl:px-8">
+      <div className="relative mx-auto grid max-w-[1720px] gap-6 px-4 py-6 pb-28 sm:px-6 xl:grid-cols-[292px_minmax(0,1fr)] xl:px-8 xl:pb-8">
         <aside className="hidden xl:block">
-          <div className="sticky top-24 space-y-4">
-            <section className="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/82 p-4 shadow-xl shadow-slate-900/5 backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.05] dark:shadow-black/20">
-              <div className="border-b border-slate-200/70 px-2 pb-5 dark:border-white/10">
-                <FlowMindLogo size="md" variant="full" href="" />
+          <div className="sticky top-[5.75rem] h-[calc(100vh-7.25rem)]">
+            <section className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/88 shadow-xl shadow-slate-900/[0.045] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0a0e1d]/88 dark:shadow-black/30">
+              <div className="habit-workspace-nav min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-5">
+                <WorkspaceNavigation
+                  counts={{
+                    habits: workspace?.habits.length ?? 0,
+                  }}
+                />
               </div>
 
-              <nav className="mt-4 space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => router.push("/dashboard")}
-                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Dashboard
-                </button>
+              <div className="space-y-3 border-t border-slate-200/70 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                <div className="relative overflow-hidden rounded-[1.45rem] border border-indigo-200/70 bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-4 text-white shadow-lg shadow-indigo-500/20 dark:border-white/10 dark:shadow-black/25">
+                  <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
+                  <div className="relative flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/65">Today&apos;s rhythm</p>
+                      <p className="mt-1 text-sm font-bold">Daily completion</p>
+                    </div>
+                    <span className="rounded-xl bg-white/15 px-2.5 py-1 text-sm font-black ring-1 ring-white/15">{completionPercent}%</span>
+                  </div>
 
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-slate-950/15 dark:bg-white dark:text-slate-950"
-                >
-                  <Flame className="h-5 w-5" />
-                  Habits
-                  <span className="ml-auto rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-bold dark:bg-slate-950/10">
-                    {workspace?.habits.length ?? 0}
-                  </span>
-                </button>
-              </nav>
+                  <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-black/15">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${completionPercent}%` }}
+                      transition={{ duration: 0.65, ease: "easeOut" }}
+                      className="h-full rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.55)]"
+                    />
+                  </div>
 
-              <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white dark:bg-white dark:text-slate-950">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] opacity-60">Today</span>
-                  <span className="text-sm font-black">{completionPercent}%</span>
+                  <p className="relative mt-3 text-xs leading-5 text-white/72">
+                    {workspace?.today_total
+                      ? `${workspace.today_completed} of ${workspace.today_total} habits completed today.`
+                      : "Create your first routine and begin building momentum."}
+                  </p>
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15 dark:bg-slate-950/10">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${completionPercent}%` }}
-                    className="h-full rounded-full bg-white dark:bg-slate-950"
-                  />
-                </div>
-                <p className="mt-3 text-xs leading-5 opacity-70">
-                  {workspace?.today_total
-                    ? `${workspace.today_completed} of ${workspace.today_total} habits completed.`
-                    : "Create your first repeatable routine."}
-                </p>
-              </div>
-            </section>
 
-            <section className="rounded-[2rem] border border-cyan-200/70 bg-gradient-to-br from-cyan-50/95 to-indigo-50/80 p-5 shadow-lg shadow-cyan-500/5 dark:border-cyan-400/20 dark:from-cyan-400/10 dark:to-indigo-400/5">
-              <div className="flex items-center gap-3">
-                <div className="rounded-2xl aurora-gradient p-2.5 text-white"><Sparkles className="h-5 w-5" /></div>
-                <div>
-                  <p className="font-semibold">Flow insight</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Consistency beats intensity.</p>
+                <div className="rounded-[1.45rem] border border-slate-200/80 bg-white/90 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+                  <div className="flex items-start gap-3">
+                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-400/12 dark:text-violet-300">
+                      <Sparkles className="h-4.5 w-4.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold">Flow insight</p>
+                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {workspace?.longest_streak
+                          ? `Your ${workspace.longest_streak}-day best streak proves that small actions compound.`
+                          : "Consistency grows when the next action feels easy to start."}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                {workspace?.longest_streak
-                  ? `Your strongest streak is ${workspace.longest_streak} days. Protect it with one small action today.`
-                  : "Start with one simple habit and make it easy to repeat."}
-              </p>
             </section>
           </div>
         </aside>
@@ -372,7 +356,7 @@ export function HabitsShell() {
             </div>
           )}
 
-          <section className="relative overflow-hidden rounded-[2.25rem] border border-slate-200/80 bg-white/88 p-6 shadow-2xl shadow-slate-900/5 backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.055] dark:shadow-black/20 sm:p-8">
+          <section className="relative overflow-hidden rounded-[2.25rem] border border-slate-200/80 bg-white/92 p-6 shadow-2xl shadow-slate-900/5 backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.055] dark:shadow-black/20 sm:p-8">
             <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
             <div className="pointer-events-none absolute bottom-0 right-24 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
             <div className="relative flex flex-col gap-7 xl:flex-row xl:items-center xl:justify-between">
@@ -589,40 +573,52 @@ export function HabitsShell() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 z-[80] bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setMobileMenuOpen(false)}>
-            <motion.aside initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} onClick={(event) => event.stopPropagation()} className="h-full w-[min(84vw,320px)] border-r border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#080d1d]">
-              <div className="flex items-center justify-between"><FlowMindLogo size="md" variant="full" href="" /><button type="button" onClick={() => setMobileMenuOpen(false)}><X className="h-5 w-5" /></button></div>
-              <nav className="mt-8 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    router.push("/dashboard");
-                  }}
-                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Dashboard
-                </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-left text-sm font-bold text-white dark:bg-white dark:text-slate-950"
-                >
-                  <Flame className="h-5 w-5" />
-                  Habits
-                  <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-xs dark:bg-slate-950/10">
-                    {workspace?.habits.length ?? 0}
-                  </span>
-                </button>
-              </nav>
-            </motion.aside>
-          </div>
-        )}
-      </AnimatePresence>
+      <WorkspaceNavigation
+        variant="mobile"
+        counts={{
+          habits: workspace?.habits.length ?? 0,
+        }}
+      />
 
       <style jsx global>{`
+        .habit-workspace-nav button[aria-current="page"] {
+          color: white !important;
+        }
+
+        .habit-workspace-nav button[aria-current="page"] > span:first-child {
+          background: linear-gradient(135deg, #4a6ded 0%, #762bbc 52%, #cf4de1 100%) !important;
+          box-shadow: 0 14px 30px rgb(74 109 237 / 0.24) !important;
+        }
+
+        .dark .habit-workspace-nav button[aria-current="page"] {
+          color: white !important;
+        }
+
+        .dark .habit-workspace-nav button[aria-current="page"] > span:first-child {
+          background: linear-gradient(135deg, #4a6ded 0%, #762bbc 52%, #cf4de1 100%) !important;
+        }
+
+        .dark .habit-workspace-nav button[aria-current="page"] > span:nth-child(2) {
+          background: rgb(255 255 255 / 0.14) !important;
+        }
+
+        .habit-workspace-nav::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .habit-workspace-nav::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .habit-workspace-nav::-webkit-scrollbar-thumb {
+          border-radius: 999px;
+          background: rgb(148 163 184 / 0.35);
+        }
+
+        .dark .habit-workspace-nav::-webkit-scrollbar-thumb {
+          background: rgb(255 255 255 / 0.16);
+        }
+
         .habit-field {
           width: 100%;
           border-radius: 1rem;

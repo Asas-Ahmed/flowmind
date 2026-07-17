@@ -19,7 +19,6 @@ import {
   Filter,
   FolderPlus,
   Grid2X2,
-  LayoutDashboard,
   List,
   ListTodo,
   Loader2,
@@ -36,6 +35,7 @@ import {
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 import { SpinnerLoader } from "@/components/common/spinner-loader";
+import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   createTask,
@@ -183,6 +183,7 @@ export function TasksShell() {
   const [subtaskText, setSubtaskText] = useState("");
   const [newListName, setNewListName] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [organizerOpen, setOrganizerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -534,57 +535,44 @@ export function TasksShell() {
   if (loading) return <SpinnerLoader fullScreen label="Loading your task workspace..." />;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50">
+    <main className="relative min-h-screen overflow-x-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,109,237,0.13),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(207,77,225,0.12),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,242,253,0.08),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(189,67,254,0.10),transparent_30%)]" />
 
-      <div className="relative flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-[280px] shrink-0 border-r border-slate-200/70 bg-white/75 p-5 backdrop-blur-2xl dark:border-white/10 dark:bg-[#070a18]/80 xl:block">
-          <div className="flex h-full flex-col">
-            <button onClick={() => router.push("/dashboard")} className="mb-8 w-fit rounded-2xl p-1"><FlowMindLogo size="md" variant="full" href="" /></button>
-
-            <nav className="space-y-1.5">
-              <button onClick={() => router.push("/dashboard")} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"><LayoutDashboard className="h-5 w-5" /> Dashboard</button>
-              <button className="flex w-full items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/15 dark:bg-white dark:text-slate-950"><ListTodo className="h-5 w-5" /> Tasks <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-xs dark:bg-slate-950/10">{tasks.length}</span></button>
-            </nav>
-
-            <div className="mt-7 min-h-0 flex-1 overflow-y-auto pr-1">
-              <div className="mb-3 flex items-center justify-between px-2"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">My lists</p><FolderPlus className="h-4 w-4 text-slate-400" /></div>
-              <div className="space-y-1">
-                <button onClick={() => setListFilter("all")} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${listFilter === "all" ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"}`}><span className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 dark:bg-white/10"><List className="h-4 w-4" /></span>All tasks<span className="ml-auto text-xs text-slate-400">{tasks.length}</span></button>
-                {lists.map((item) => (
-                  <div key={item.id} className={`group flex items-center rounded-2xl transition ${listFilter === item.id ? "bg-indigo-50 dark:bg-indigo-400/10" : "hover:bg-slate-100 dark:hover:bg-white/5"}`}>
-                    <button onClick={() => setListFilter(item.id)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left text-sm"><span className="h-3 w-3 rounded-full ring-4 ring-slate-100 dark:ring-white/5" style={{ background: item.color }} /><span className="truncate font-medium">{item.name}</span><span className="ml-auto text-xs text-slate-400">{tasks.filter((task) => task.list_id === item.id).length}</span></button>
-                    {!item.is_default && <button onClick={() => void removeList(item.id)} className="mr-2 rounded-xl p-1.5 text-slate-400 opacity-0 transition hover:bg-rose-500/10 hover:text-rose-500 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 flex gap-2"><input value={newListName} onChange={(e) => setNewListName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addList(); }} placeholder="Create a list" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-indigo-400 dark:border-white/10 dark:bg-white/5" /><button onClick={() => void addList()} className="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-600 text-white transition hover:bg-indigo-500"><Plus className="h-4 w-4" /></button></div>
-
-              <div className="mt-7 mb-3 px-2"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Categories</p></div>
-              <div className="flex flex-wrap gap-2">{categories.map((category) => <div key={category.id} className="group flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-white/5"><span className="h-2 w-2 rounded-full" style={{ background: category.color }} /><span>{category.name}</span><button onClick={() => void removeCategory(category.id)} className="text-slate-400 transition hover:text-rose-500"><X className="h-3 w-3" /></button></div>)}</div>
-              <div className="mt-3 flex gap-2"><input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addCategory(); }} placeholder="New category" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-white/10 dark:bg-white/5" /><button onClick={() => void addCategory()} className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-600 text-white transition hover:bg-violet-500"><Plus className="h-4 w-4" /></button></div>
-            </div>
-
-            <div className="mt-5 space-y-1 border-t border-slate-200/80 pt-4 dark:border-white/10">
-              <button onClick={() => setFavoritesOnly((value) => !value)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${favoritesOnly ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"}`}><Star className={`h-4 w-4 ${favoritesOnly ? "fill-current" : ""}`} /> Favorites</button>
-              <button onClick={() => setShowCompleted((value) => !value)} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"><Archive className="h-4 w-4" /> {showCompleted ? "Hide completed" : "Show completed"}</button>
-            </div>
+      <div className="relative min-h-screen xl:pl-[248px]">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-slate-200/70 bg-white/90 p-5 shadow-[12px_0_40px_rgba(15,23,42,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#070a18]/95 dark:shadow-none xl:block">
+          <div className="h-screen overflow-y-auto">
+            <WorkspaceNavigation
+              counts={{
+                tasks: tasks.length,
+              }}
+            />
           </div>
         </aside>
 
-        <section className="min-w-0 flex-1">
+        <section className="min-w-0">
           <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f5f7fb]/80 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/80">
             <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6 lg:px-8">
               <button onClick={() => router.push("/dashboard")} className="xl:hidden"><FlowMindLogo size="sm" variant="mark" href="" /></button>
               <div className="hidden min-w-0 md:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Task workspace</p><h1 className="truncate text-lg font-bold">Plan clearly. Finish calmly.</h1></div>
               <label className="mx-auto flex max-w-xl flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 shadow-sm dark:border-white/10 dark:bg-white/5"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, notes or tags..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" /></label>
+              <button
+                onClick={() => setOrganizerOpen((value) => !value)}
+                className={`hidden h-11 items-center gap-2 rounded-2xl border px-3.5 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-md sm:flex ${
+                  organizerOpen
+                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200"
+                    : "border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                }`}
+              >
+                <FolderPlus className="h-4 w-4" />
+                Organize
+              </button>
               <button onClick={() => void requestNotifications()} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300" title="Enable browser reminders"><Bell className="h-5 w-5" /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#0a0d1c]" /></button>
               <ThemeToggle />
               <button onClick={() => router.push("/settings")} className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300"><Settings className="h-5 w-5" /></button>
             </div>
           </header>
 
-          <div className="mx-auto max-w-[1560px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-[1560px] space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8 xl:pb-6">
             <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] sm:p-7">
               <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
               <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -666,6 +654,158 @@ export function TasksShell() {
               ))}
             </section>
 
+            <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+                  <button
+                    onClick={() => setListFilter("all")}
+                    className={`flex min-w-fit items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                      listFilter === "all"
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <ListTodo className="h-4 w-4" />
+                    All tasks
+                    <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] dark:bg-white/10">{tasks.length}</span>
+                  </button>
+
+                  {lists.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setListFilter(item.id)}
+                      className={`flex min-w-fit items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                        listFilter === item.id
+                          ? "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 dark:bg-indigo-400/10 dark:text-indigo-200 dark:ring-indigo-400/20"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: item.color }} />
+                      {item.name}
+                      <span className="text-[10px] text-slate-400">
+                        {tasks.filter((task) => task.list_id === item.id).length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setFavoritesOnly((value) => !value)}
+                    className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                      favoritesOnly
+                        ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <Star className={`h-4 w-4 ${favoritesOnly ? "fill-current" : ""}`} />
+                    Favorites
+                  </button>
+                  <button
+                    onClick={() => setShowCompleted((value) => !value)}
+                    className="flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-200 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                  >
+                    <Archive className="h-4 w-4" />
+                    {showCompleted ? "Hide completed" : "Show completed"}
+                  </button>
+                  <button
+                    onClick={() => setOrganizerOpen((value) => !value)}
+                    className="flex items-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-bold text-white transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-950"
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                    Manage
+                  </button>
+                </div>
+              </div>
+
+              {organizerOpen && (
+                <div className="mt-3 grid gap-3 border-t border-slate-200/70 pt-3 dark:border-white/10 lg:grid-cols-2">
+                  <section className="rounded-[1.4rem] bg-slate-50/90 p-4 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600 dark:text-cyan-300">Collections</p>
+                        <h3 className="mt-1 font-black">Manage task lists</h3>
+                      </div>
+                      <FolderPlus className="h-5 w-5 text-slate-400" />
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {lists.map((item) => (
+                        <div key={item.id} className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-[#0b1022]">
+                          <span className="h-3 w-3 rounded-full ring-4 ring-slate-100 dark:ring-white/5" style={{ background: item.color }} />
+                          <button onClick={() => setListFilter(item.id)} className="min-w-0 flex-1 truncate text-left text-sm font-semibold">
+                            {item.name}
+                          </button>
+                          <span className="text-xs text-slate-400">{tasks.filter((task) => task.list_id === item.id).length}</span>
+                          {!item.is_default && (
+                            <button
+                              onClick={() => void removeList(item.id)}
+                              className="rounded-xl p-1.5 text-slate-400 transition hover:bg-rose-500/10 hover:text-rose-500"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        value={newListName}
+                        onChange={(event) => setNewListName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") void addList();
+                        }}
+                        placeholder="Create a new list"
+                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-indigo-400 dark:border-white/10 dark:bg-[#0b1022]"
+                      />
+                      <button onClick={() => void addList()} className="grid h-11 w-11 place-items-center rounded-2xl bg-indigo-600 text-white transition hover:bg-indigo-500">
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="rounded-[1.4rem] bg-slate-50/90 p-4 dark:bg-white/[0.035]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-violet-600 dark:text-fuchsia-300">Organization</p>
+                        <h3 className="mt-1 font-black">Manage categories</h3>
+                      </div>
+                      <Tag className="h-5 w-5 text-slate-400" />
+                    </div>
+
+                    <div className="mt-4 flex min-h-12 flex-wrap content-start gap-2">
+                      {categories.map((category) => (
+                        <div key={category.id} className="group flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold dark:border-white/10 dark:bg-[#0b1022]">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ background: category.color }} />
+                          <span>{category.name}</span>
+                          <button onClick={() => void removeCategory(category.id)} className="text-slate-400 transition hover:text-rose-500">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      {!categories.length && <p className="text-sm text-slate-400">No categories yet.</p>}
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        value={newCategoryName}
+                        onChange={(event) => setNewCategoryName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") void addCategory();
+                        }}
+                        placeholder="Create a new category"
+                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-violet-400 dark:border-white/10 dark:bg-[#0b1022]"
+                      />
+                      <button onClick={() => void addCategory()} className="grid h-11 w-11 place-items-center rounded-2xl bg-violet-600 text-white transition hover:bg-violet-500">
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              )}
+            </section>
+
             <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="min-w-0 space-y-5">
                 <div className="flex flex-col gap-3 rounded-[1.7rem] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045] lg:flex-row lg:items-center">
@@ -694,6 +834,13 @@ export function TasksShell() {
           </div>
         </section>
       </div>
+
+      <WorkspaceNavigation
+        variant="mobile"
+        counts={{
+          tasks: tasks.length,
+        }}
+      />
 
       {modalOpen && <TaskModal editing={editing} form={form} setForm={setForm} tagsText={tagsText} setTagsText={setTagsText} subtaskText={subtaskText} setSubtaskText={setSubtaskText} lists={lists} categories={categories} saving={saving} onClose={() => setModalOpen(false)} onSubmit={saveTask} />}
 
