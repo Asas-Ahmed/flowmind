@@ -1,9 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Archive,
+  BarChart3,
   Bell,
+  BrainCircuit,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -11,8 +14,11 @@ import {
   ChevronRight,
   Circle,
   Clock3,
+  Copy,
+  Download,
   Filter,
   FolderPlus,
+  Grid2X2,
   LayoutDashboard,
   List,
   ListTodo,
@@ -21,21 +27,23 @@ import {
   Plus,
   Search,
   Settings,
+  Star,
   Tag,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
 
-import { SpinnerLoader } from "@/components/common/spinner-loader";
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
+import { SpinnerLoader } from "@/components/common/spinner-loader";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   createTask,
   createTaskCategory,
   createTaskList,
   deleteTask,
-  deleteTaskList,
   deleteTaskCategory,
+  deleteTaskList,
   getTaskWorkspace,
   updateTask,
 } from "@/lib/api";
@@ -50,6 +58,9 @@ import type {
   TaskPayload,
   TaskStatus,
 } from "@/types/task";
+
+type ViewMode = "list" | "board" | "matrix" | "calendar" | "analytics";
+type SortMode = "due" | "created" | "title" | "status" | "priority";
 
 const blankTask = (): TaskPayload => ({
   title: "",
@@ -71,19 +82,50 @@ const blankTask = (): TaskPayload => ({
   subtasks: [],
 });
 
-const priorityMeta: Record<EisenhowerPriority, { label: string; className: string }> = {
-  urgent_important: { label: "Do first", className: "bg-rose-500/12 text-rose-600 dark:text-rose-300" },
-  important_not_urgent: { label: "Schedule", className: "bg-amber-500/12 text-amber-700 dark:text-amber-300" },
-  urgent_not_important: { label: "Delegate", className: "bg-sky-500/12 text-sky-700 dark:text-sky-300" },
-  not_urgent_not_important: { label: "Later", className: "bg-slate-500/12 text-slate-600 dark:text-slate-300" },
-};
-
 const statusLabels: Record<TaskStatus, string> = {
   not_started: "Not started",
   in_progress: "In progress",
   waiting: "Waiting",
   completed: "Completed",
 };
+
+const priorityMeta: Record<
+  EisenhowerPriority,
+  { label: string; subtitle: string; className: string; order: number }
+> = {
+  urgent_important: {
+    label: "Do first",
+    subtitle: "Urgent + important",
+    className: "border-rose-300 bg-rose-500/8 dark:border-rose-400/25",
+    order: 0,
+  },
+  important_not_urgent: {
+    label: "Schedule",
+    subtitle: "Important, not urgent",
+    className: "border-amber-300 bg-amber-500/8 dark:border-amber-400/25",
+    order: 1,
+  },
+  urgent_not_important: {
+    label: "Delegate",
+    subtitle: "Urgent, less important",
+    className: "border-sky-300 bg-sky-500/8 dark:border-sky-400/25",
+    order: 2,
+  },
+  not_urgent_not_important: {
+    label: "Eliminate",
+    subtitle: "Low value",
+    className: "border-slate-300 bg-slate-500/8 dark:border-white/10",
+    order: 3,
+  },
+};
+
+const viewButtons: Array<{ value: ViewMode; label: string; icon: typeof List }> = [
+  { value: "list", label: "List", icon: List },
+  { value: "board", label: "Board", icon: Grid2X2 },
+  { value: "matrix", label: "Matrix", icon: BrainCircuit },
+  { value: "calendar", label: "Calendar", icon: CalendarDays },
+  { value: "analytics", label: "Analytics", icon: BarChart3 },
+];
 
 function toInputDate(value: string | null) {
   if (!value) return "";
@@ -100,18 +142,39 @@ function sameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function taskProgress(task: Task) {
+  if (!task.subtasks.length) return task.status === "completed" ? 100 : 0;
+  return Math.round((task.subtasks.filter((item) => item.completed).length / task.subtasks.length) * 100);
+}
+
+function downloadJson(filename: string, value: unknown) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function TasksShell() {
   const router = useRouter();
+  const importRef = useRef<HTMLInputElement>(null);
+  const favoritesLoadedRef = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [lists, setLists] = useState<TaskList[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [listFilter, setListFilter] = useState<number | "all">("all");
-  const [view, setView] = useState<"list" | "calendar">("list");
+  const [sortMode, setSortMode] = useState<SortMode>("due");
+  const [showCompleted, setShowCompleted] = useState(true);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [view, setView] = useState<ViewMode>("list");
   const [month, setMonth] = useState(() => new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
@@ -123,26 +186,37 @@ export function TasksShell() {
 
   useEffect(() => {
     let cancelled = false;
+    const stored = window.localStorage.getItem("flowmind_task_favorites");
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as unknown;
+          if (Array.isArray(parsed) && parsed.every((value) => typeof value === "number")) {
+            setFavoriteIds(parsed);
+          }
+        } catch {
+          window.localStorage.removeItem("flowmind_task_favorites");
+        }
+      }
+
+      favoritesLoadedRef.current = true;
+    });
 
     getTaskWorkspace()
       .then((data) => {
         if (cancelled) return;
-
         setTasks(data.tasks);
         setLists(data.lists);
         setCategories(data.categories);
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
-
-        setError(
-          err instanceof Error ? err.message : "Unable to load tasks",
-        );
+        if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load tasks");
       })
       .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       });
 
     return () => {
@@ -150,32 +224,109 @@ export function TasksShell() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!favoritesLoadedRef.current) return;
+    window.localStorage.setItem("flowmind_task_favorites", JSON.stringify(favoriteIds));
+  }, [favoriteIds]);
+
+  useEffect(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      tasks.forEach((task) => {
+        if (!task.reminder_enabled || !task.reminder_at || task.status === "completed") return;
+        const reminderTime = new Date(task.reminder_at).getTime();
+        const marker = `flowmind_reminder_${task.id}_${task.reminder_at}`;
+        if (reminderTime <= now && now - reminderTime < 60000 && !sessionStorage.getItem(marker)) {
+          new Notification("FlowMind task reminder", { body: task.title });
+          sessionStorage.setItem(marker, "shown");
+        }
+      });
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, [tasks]);
+
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
-    return tasks.filter((task) => {
-      const matchesSearch = !query || task.title.toLowerCase().includes(query) || task.description?.toLowerCase().includes(query) || task.tags.some((tag) => tag.includes(query));
-      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-      const matchesList = listFilter === "all" || task.list_id === listFilter;
-      return matchesSearch && matchesStatus && matchesList;
-    });
-  }, [tasks, search, statusFilter, listFilter]);
+    const priorityRank = (task: Task) => priorityMeta[task.eisenhower].order;
+    const statusRank: Record<TaskStatus, number> = { in_progress: 0, waiting: 1, not_started: 2, completed: 3 };
+
+    return tasks
+      .filter((task) => {
+        const matchesSearch =
+          !query ||
+          task.title.toLowerCase().includes(query) ||
+          task.description?.toLowerCase().includes(query) ||
+          task.tags.some((tag) => tag.toLowerCase().includes(query));
+        const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+        const matchesList = listFilter === "all" || task.list_id === listFilter;
+        const matchesCompleted = showCompleted || task.status !== "completed";
+        const matchesFavorite = !favoritesOnly || favoriteIds.includes(task.id);
+        return matchesSearch && matchesStatus && matchesList && matchesCompleted && matchesFavorite;
+      })
+      .sort((a, b) => {
+        if (sortMode === "title") return a.title.localeCompare(b.title);
+        if (sortMode === "created") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        if (sortMode === "status") return statusRank[a.status] - statusRank[b.status];
+        if (sortMode === "priority") return priorityRank(a) - priorityRank(b);
+        const aDue = a.due_at ? new Date(a.due_at).getTime() : Number.MAX_SAFE_INTEGER;
+        const bDue = b.due_at ? new Date(b.due_at).getTime() : Number.MAX_SAFE_INTEGER;
+        return aDue - bDue;
+      });
+  }, [tasks, search, statusFilter, listFilter, showCompleted, favoritesOnly, favoriteIds, sortMode]);
 
   const stats = useMemo(() => {
     const now = new Date();
-    return {
-      total: tasks.length,
-      completed: tasks.filter((task) => task.status === "completed").length,
-      dueToday: tasks.filter((task) => task.due_at && sameDay(new Date(task.due_at), now) && task.status !== "completed").length,
-      overdue: tasks.filter((task) => task.due_at && new Date(task.due_at) < now && task.status !== "completed").length,
-    };
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const completedToday = tasks.filter((task) => task.completed_at && sameDay(new Date(task.completed_at), now)).length;
+    const completed = tasks.filter((task) => task.status === "completed").length;
+    const completionRate = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
+    const overdue = tasks.filter((task) => task.due_at && new Date(task.due_at) < now && task.status !== "completed").length;
+    const dueToday = tasks.filter((task) => task.due_at && sameDay(new Date(task.due_at), now) && task.status !== "completed").length;
+    const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(startToday);
+      date.setDate(startToday.getDate() - (6 - index));
+      return {
+        label: date.toLocaleDateString([], { weekday: "short" }),
+        count: tasks.filter((task) => task.completed_at && sameDay(new Date(task.completed_at), date)).length,
+      };
+    });
+    return { total: tasks.length, completed, completedToday, completionRate, overdue, dueToday, lastSevenDays };
   }, [tasks]);
+
+  const suggestions = useMemo(() => {
+    const now = new Date();
+    const open = tasks.filter((task) => task.status !== "completed");
+    const result: string[] = [];
+    const overdue = open.filter((task) => task.due_at && new Date(task.due_at) < now);
+    const doFirst = open.filter((task) => task.eisenhower === "urgent_important");
+    const unplanned = open.filter((task) => !task.due_at);
+    if (overdue.length) result.push(`Clear ${overdue.length} overdue task${overdue.length === 1 ? "" : "s"} before adding more work.`);
+    if (doFirst.length) result.push(`Start with “${doFirst[0].title}” because it is marked Do First.`);
+    if (unplanned.length) result.push(`Schedule ${unplanned.length} task${unplanned.length === 1 ? "" : "s"} without due dates.`);
+    if (!result.length && open.length) result.push(`Your workload looks controlled. Continue with “${open[0].title}”.`);
+    if (!open.length) result.push("Everything is complete. Add tomorrow’s most important task when ready.");
+    return result.slice(0, 3);
+  }, [tasks]);
+
+  const calendarDays = useMemo(() => {
+    const first = new Date(month.getFullYear(), month.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(first.getDate() - first.getDay());
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return date;
+    });
+  }, [month]);
 
   const openCreate = (date?: Date) => {
     const next = blankTask();
     next.list_id = lists[0]?.id ?? null;
     if (date) {
-      date.setHours(9, 0, 0, 0);
-      next.due_at = date.toISOString();
+      const selected = new Date(date);
+      selected.setHours(9, 0, 0, 0);
+      next.due_at = selected.toISOString();
     }
     setEditing(null);
     setForm(next);
@@ -213,6 +364,10 @@ export function TasksShell() {
   const saveTask = async (event: FormEvent) => {
     event.preventDefault();
     if (!form.title.trim()) return;
+    if (form.reminder_enabled && !form.reminder_at) {
+      setError("Choose a reminder time or disable the reminder.");
+      return;
+    }
     setSaving(true);
     setError("");
     const payload: TaskPayload = {
@@ -237,125 +392,284 @@ export function TasksShell() {
     }
   };
 
-  const toggleComplete = async (task: Task) => {
-    const status: TaskStatus = task.status === "completed" ? "not_started" : "completed";
+  const patchTask = async (taskId: number, payload: Partial<TaskPayload>) => {
     try {
-      const updated = await updateTask(task.id, { status });
-      setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
+      const updated = await updateTask(taskId, payload);
+      setTasks((current) => current.map((task) => (task.id === taskId ? updated : task)));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to update task");
     }
   };
 
   const removeTask = async (taskId: number) => {
+    if (!window.confirm("Delete this task permanently?")) return;
     try {
       await deleteTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
+      setFavoriteIds((current) => current.filter((id) => id !== taskId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete task");
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    const updatedTags = tagsText
-      .split(",")
-      .map((tag) => tag.trim().replace(/^#/, ""))
-      .filter(Boolean)
-      .filter((tag) => tag !== tagToRemove);
-
-    setTagsText(updatedTags.join(", "));
+  const duplicateTask = async (task: Task) => {
+    const payload: TaskPayload = {
+      title: `${task.title} (copy)`,
+      description: task.description,
+      list_id: task.list_id,
+      category_id: task.category_id,
+      status: "not_started",
+      eisenhower: task.eisenhower,
+      energy_level: task.energy_level,
+      start_at: task.start_at,
+      due_at: task.due_at,
+      is_all_day: task.is_all_day,
+      repeat_rule: task.repeat_rule,
+      repeat_interval: task.repeat_interval,
+      repeat_until: task.repeat_until,
+      reminder_enabled: false,
+      reminder_at: null,
+      tags: [...task.tags],
+      subtasks: task.subtasks.map((item) => ({ ...item, id: crypto.randomUUID(), completed: false })),
+    };
+    try {
+      const created = await createTask(payload);
+      setTasks((current) => [created, ...current]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to duplicate task");
+    }
   };
 
   const addList = async () => {
     if (!newListName.trim()) return;
-    const created = await createTaskList(newListName.trim(), "#4a6ded");
-    setLists((current) => [...current, created]);
-    setNewListName("");
+    try {
+      const created = await createTaskList(newListName.trim(), "#4a6ded");
+      setLists((current) => [...current, created]);
+      setNewListName("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to create list");
+    }
   };
 
   const removeList = async (listId: number) => {
-    const confirmed = window.confirm(
-      "Delete this list? Tasks inside it will move to no list.",
-    );
-
-    if (!confirmed) return;
-
+    if (!window.confirm("Delete this list? Its tasks will become unassigned.")) return;
     try {
       await deleteTaskList(listId);
-
-      setLists((current) =>
-        current.filter((list) => list.id !== listId),
-      );
-
-      setTasks((current) =>
-        current.map((task) =>
-          task.list_id === listId
-            ? { ...task, list_id: null }
-            : task,
-        ),
-      );
-
-      setForm((current) =>
-        current.list_id === listId
-          ? { ...current, list_id: null }
-          : current,
-      );
-
-      if (listFilter === listId) {
-        setListFilter("all");
-      }
+      setLists((current) => current.filter((item) => item.id !== listId));
+      setTasks((current) => current.map((task) => (task.list_id === listId ? { ...task, list_id: null } : task)));
+      if (listFilter === listId) setListFilter("all");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to delete list",
-      );
+      setError(err instanceof Error ? err.message : "Unable to delete list");
     }
   };
 
   const addCategory = async () => {
     if (!newCategoryName.trim()) return;
-    const created = await createTaskCategory(newCategoryName.trim(), "#762bbc");
-    setCategories((current) => [...current, created]);
-    setNewCategoryName("");
-  };
-
-  const removeCategory = async (categoryId: number) => {
-    const confirmed = window.confirm(
-      "Delete this category? Tasks using it will become uncategorized.",
-    );
-
-    if (!confirmed) return;
-
     try {
-      await deleteTaskCategory(categoryId);
-
-      setCategories((current) =>
-        current.filter((category) => category.id !== categoryId),
-      );
-
-      setTasks((current) =>
-        current.map((task) =>
-          task.category_id === categoryId
-            ? { ...task, category_id: null }
-            : task,
-        ),
-      );
-
-      setForm((current) =>
-        current.category_id === categoryId
-          ? { ...current, category_id: null }
-          : current,
-      );
+      const created = await createTaskCategory(newCategoryName.trim(), "#762bbc");
+      setCategories((current) => [...current, created]);
+      setNewCategoryName("");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to delete category",
-      );
+      setError(err instanceof Error ? err.message : "Unable to create category");
     }
   };
 
+  const removeCategory = async (categoryId: number) => {
+    if (!window.confirm("Delete this category? Its tasks will become uncategorized.")) return;
+    try {
+      await deleteTaskCategory(categoryId);
+      setCategories((current) => current.filter((item) => item.id !== categoryId));
+      setTasks((current) => current.map((task) => (task.category_id === categoryId ? { ...task, category_id: null } : task)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to delete category");
+    }
+  };
+
+  const importTasks = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text()) as { tasks?: Task[] } | Task[];
+      const source = Array.isArray(parsed) ? parsed : parsed.tasks ?? [];
+      const created: Task[] = [];
+      for (const task of source.slice(0, 100)) {
+        created.push(
+          await createTask({
+            title: task.title,
+            description: task.description ?? null,
+            list_id: lists.some((item) => item.id === task.list_id) ? task.list_id : lists[0]?.id ?? null,
+            category_id: categories.some((item) => item.id === task.category_id) ? task.category_id : null,
+            status: task.status ?? "not_started",
+            eisenhower: task.eisenhower ?? "important_not_urgent",
+            energy_level: task.energy_level ?? "medium",
+            start_at: task.start_at ?? null,
+            due_at: task.due_at ?? null,
+            is_all_day: task.is_all_day ?? false,
+            repeat_rule: task.repeat_rule ?? "none",
+            repeat_interval: task.repeat_interval ?? 1,
+            repeat_until: task.repeat_until ?? null,
+            reminder_enabled: false,
+            reminder_at: null,
+            tags: task.tags ?? [],
+            subtasks: (task.subtasks ?? []).map((item) => ({ ...item, id: crypto.randomUUID() })),
+          }),
+        );
+      }
+      setTasks((current) => [...created, ...current]);
+    } catch {
+      setError("Import failed. Choose a valid FlowMind task JSON file.");
+    }
+  };
+
+  const requestNotifications = async () => {
+    if (!("Notification" in window)) {
+      setError("This browser does not support notifications.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") setError("Browser notification permission was not granted.");
+  };
+
+  if (loading) return <SpinnerLoader fullScreen label="Loading your task workspace..." />;
+
+  return (
+    <main className="relative min-h-screen overflow-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,109,237,0.13),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(207,77,225,0.12),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,242,253,0.08),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(189,67,254,0.10),transparent_30%)]" />
+
+      <div className="relative flex min-h-screen">
+        <aside className="sticky top-0 hidden h-screen w-[280px] shrink-0 border-r border-slate-200/70 bg-white/75 p-5 backdrop-blur-2xl dark:border-white/10 dark:bg-[#070a18]/80 xl:block">
+          <div className="flex h-full flex-col">
+            <button onClick={() => router.push("/dashboard")} className="mb-8 w-fit rounded-2xl p-1"><FlowMindLogo size="md" variant="full" href="" /></button>
+
+            <nav className="space-y-1.5">
+              <button onClick={() => router.push("/dashboard")} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"><LayoutDashboard className="h-5 w-5" /> Dashboard</button>
+              <button className="flex w-full items-center gap-3 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-950/15 dark:bg-white dark:text-slate-950"><ListTodo className="h-5 w-5" /> Tasks <span className="ml-auto rounded-full bg-white/15 px-2 py-0.5 text-xs dark:bg-slate-950/10">{tasks.length}</span></button>
+            </nav>
+
+            <div className="mt-7 min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="mb-3 flex items-center justify-between px-2"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">My lists</p><FolderPlus className="h-4 w-4 text-slate-400" /></div>
+              <div className="space-y-1">
+                <button onClick={() => setListFilter("all")} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${listFilter === "all" ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-400/10 dark:text-indigo-200" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"}`}><span className="grid h-8 w-8 place-items-center rounded-xl bg-slate-100 dark:bg-white/10"><List className="h-4 w-4" /></span>All tasks<span className="ml-auto text-xs text-slate-400">{tasks.length}</span></button>
+                {lists.map((item) => (
+                  <div key={item.id} className={`group flex items-center rounded-2xl transition ${listFilter === item.id ? "bg-indigo-50 dark:bg-indigo-400/10" : "hover:bg-slate-100 dark:hover:bg-white/5"}`}>
+                    <button onClick={() => setListFilter(item.id)} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 text-left text-sm"><span className="h-3 w-3 rounded-full ring-4 ring-slate-100 dark:ring-white/5" style={{ background: item.color }} /><span className="truncate font-medium">{item.name}</span><span className="ml-auto text-xs text-slate-400">{tasks.filter((task) => task.list_id === item.id).length}</span></button>
+                    {!item.is_default && <button onClick={() => void removeList(item.id)} className="mr-2 rounded-xl p-1.5 text-slate-400 opacity-0 transition hover:bg-rose-500/10 hover:text-rose-500 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2"><input value={newListName} onChange={(e) => setNewListName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addList(); }} placeholder="Create a list" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-indigo-400 dark:border-white/10 dark:bg-white/5" /><button onClick={() => void addList()} className="grid h-10 w-10 place-items-center rounded-2xl bg-indigo-600 text-white transition hover:bg-indigo-500"><Plus className="h-4 w-4" /></button></div>
+
+              <div className="mt-7 mb-3 px-2"><p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Categories</p></div>
+              <div className="flex flex-wrap gap-2">{categories.map((category) => <div key={category.id} className="group flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold dark:border-white/10 dark:bg-white/5"><span className="h-2 w-2 rounded-full" style={{ background: category.color }} /><span>{category.name}</span><button onClick={() => void removeCategory(category.id)} className="text-slate-400 transition hover:text-rose-500"><X className="h-3 w-3" /></button></div>)}</div>
+              <div className="mt-3 flex gap-2"><input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void addCategory(); }} placeholder="New category" className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-white/10 dark:bg-white/5" /><button onClick={() => void addCategory()} className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-600 text-white transition hover:bg-violet-500"><Plus className="h-4 w-4" /></button></div>
+            </div>
+
+            <div className="mt-5 space-y-1 border-t border-slate-200/80 pt-4 dark:border-white/10">
+              <button onClick={() => setFavoritesOnly((value) => !value)} className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${favoritesOnly ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"}`}><Star className={`h-4 w-4 ${favoritesOnly ? "fill-current" : ""}`} /> Favorites</button>
+              <button onClick={() => setShowCompleted((value) => !value)} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"><Archive className="h-4 w-4" /> {showCompleted ? "Hide completed" : "Show completed"}</button>
+            </div>
+          </div>
+        </aside>
+
+        <section className="min-w-0 flex-1">
+          <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f5f7fb]/80 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/80">
+            <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+              <button onClick={() => router.push("/dashboard")} className="xl:hidden"><FlowMindLogo size="sm" variant="icon" href="" /></button>
+              <div className="hidden min-w-0 md:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Task workspace</p><h1 className="truncate text-lg font-bold">Plan clearly. Finish calmly.</h1></div>
+              <label className="mx-auto flex max-w-xl flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 shadow-sm dark:border-white/10 dark:bg-white/5"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, notes or tags..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" /></label>
+              <button onClick={() => void requestNotifications()} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300" title="Enable browser reminders"><Bell className="h-5 w-5" /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#0a0d1c]" /></button>
+              <ThemeToggle />
+              <button onClick={() => router.push("/settings")} className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300"><Settings className="h-5 w-5" /></button>
+            </div>
+          </header>
+
+          <div className="mx-auto max-w-[1560px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+            <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] sm:p-7">
+              <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
+              <div className="relative flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+                <div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-200"><BrainCircuit className="h-3.5 w-3.5" /> Smart planning workspace</div><h2 className="max-w-3xl text-3xl font-black tracking-tight sm:text-4xl">Turn your priorities into focused progress.</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Organize work across lists, statuses, the Eisenhower Matrix and calendar without losing sight of what matters next.</p></div>
+                <div className="flex flex-wrap gap-2"><button onClick={() => downloadJson("flowmind-tasks.json", { exported_at: new Date().toISOString(), tasks })} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5"><Download className="h-4 w-4" /> Export</button><button onClick={() => importRef.current?.click()} className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5"><Upload className="h-4 w-4" /> Import</button><input ref={importRef} type="file" accept="application/json" onChange={(event) => void importTasks(event)} className="hidden" /><button onClick={() => openCreate()} className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-violet-600/20 transition hover:-translate-y-0.5 hover:shadow-xl"><Plus className="h-5 w-5" /> New task</button></div>
+              </div>
+            </section>
+
+            {error && <div className="flex items-center justify-between rounded-2xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"><span>{error}</span><button onClick={() => setError("")} className="rounded-lg p-1 hover:bg-rose-500/10"><X className="h-4 w-4" /></button></div>}
+
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              {[
+                ["All tasks", stats.total, ListTodo, "Total workload", "from-indigo-500 to-blue-500"],
+                ["Due today", stats.dueToday, CalendarDays, "Needs attention", "from-cyan-500 to-blue-500"],
+                ["Overdue", stats.overdue, Clock3, "Past deadline", "from-rose-500 to-orange-500"],
+                ["Completed", stats.completedToday, CheckCircle2, "Finished today", "from-emerald-500 to-teal-500"],
+                ["Completion", `${stats.completionRate}%`, BarChart3, `${stats.completed} of ${stats.total} tasks`, "from-violet-500 to-fuchsia-500"],
+              ].map(([label, value, Icon, helper, gradient]) => <article key={String(label)} className="group rounded-[1.6rem] border border-slate-200/70 bg-white/80 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-white/[0.045]"><div className="flex items-start justify-between"><div className={`grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-lg`}><Icon className="h-4.5 w-4.5" /></div><span className="text-xs text-slate-400">{String(helper)}</span></div><p className="mt-5 text-sm font-medium text-slate-500 dark:text-slate-400">{String(label)}</p><p className="mt-1 text-3xl font-black tracking-tight">{String(value)}</p></article>)}
+            </section>
+
+            <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-w-0 space-y-5">
+                <div className="flex flex-col gap-3 rounded-[1.7rem] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045] lg:flex-row lg:items-center">
+                  <div className="flex flex-1 gap-2 overflow-x-auto rounded-2xl bg-slate-100/80 p-1 dark:bg-white/5">{viewButtons.map(({ value, label, icon: Icon }) => <button key={value} onClick={() => setView(value)} className={`flex min-w-fit items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${view === value ? "bg-white text-slate-950 shadow-sm dark:bg-white/10 dark:text-white" : "text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"}`}><Icon className="h-4 w-4" />{label}</button>)}</div>
+                  <div className="flex flex-wrap gap-2"><label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 dark:border-white/10 dark:bg-[#0b1022]"><Filter className="h-4 w-4 text-slate-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | TaskStatus)} className="task-select bg-transparent py-2.5 text-sm outline-none"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="task-select rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-white/10 dark:bg-[#0b1022]"><option value="due">Due date</option><option value="priority">Priority</option><option value="status">Status</option><option value="created">Newest</option><option value="title">Title</option></select></div>
+                </div>
+
+                {view === "list" && <div className="space-y-3">{filteredTasks.map((task) => <TaskCard key={task.id} task={task} favorite={favoriteIds.includes(task.id)} lists={lists} categories={categories} onEdit={openEdit} onDelete={removeTask} onDuplicate={duplicateTask} onFavorite={(id) => setFavoriteIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} onStatus={(status) => void patchTask(task.id, { status })} />)}{!filteredTasks.length && <EmptyState onAdd={() => openCreate()} />}</div>}
+
+                {view === "board" && <div className="grid gap-4 xl:grid-cols-4">{(Object.keys(statusLabels) as TaskStatus[]).map((status) => <section key={status} className="min-h-[460px] rounded-[1.7rem] border border-slate-200/70 bg-slate-100/60 p-3 dark:border-white/10 dark:bg-white/[0.025]"><div className="mb-3 flex items-center justify-between px-1"><div className="flex items-center gap-2"><span className={`h-2.5 w-2.5 rounded-full ${status === "completed" ? "bg-emerald-500" : status === "in_progress" ? "bg-indigo-500" : status === "waiting" ? "bg-amber-500" : "bg-slate-400"}`} /><h2 className="font-bold">{statusLabels[status]}</h2></div><span className="rounded-full bg-white px-2 py-1 text-xs font-bold shadow-sm dark:bg-white/10">{filteredTasks.filter((task) => task.status === status).length}</span></div><div className="space-y-3">{filteredTasks.filter((task) => task.status === status).map((task) => <CompactTask key={task.id} task={task} onOpen={openEdit} onStatus={(next) => void patchTask(task.id, { status: next })} />)}</div></section>)}</div>}
+
+                {view === "matrix" && <div className="grid gap-4 lg:grid-cols-2">{(Object.keys(priorityMeta) as EisenhowerPriority[]).map((priority) => <section key={priority} className={`min-h-72 rounded-[1.8rem] border p-4 ${priorityMeta[priority].className}`}><div className="mb-4 flex items-center justify-between"><div><h2 className="text-lg font-black">{priorityMeta[priority].label}</h2><p className="text-xs text-slate-500 dark:text-slate-400">{priorityMeta[priority].subtitle}</p></div><span className="rounded-full bg-white/70 px-2.5 py-1 text-xs font-bold dark:bg-white/10">{filteredTasks.filter((task) => task.eisenhower === priority).length}</span></div><div className="grid gap-3 sm:grid-cols-2">{filteredTasks.filter((task) => task.eisenhower === priority).map((task) => <CompactTask key={task.id} task={task} onOpen={openEdit} onStatus={(next) => void patchTask(task.id, { status: next })} />)}</div></section>)}</div>}
+
+                {view === "calendar" && <section className="overflow-hidden rounded-[1.8rem] border border-slate-200/70 bg-white/80 shadow-sm dark:border-white/10 dark:bg-white/[0.045]"><div className="flex items-center justify-between border-b border-slate-200/70 p-4 dark:border-white/10"><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="rounded-xl p-2 transition hover:bg-slate-100 dark:hover:bg-white/10"><ChevronLeft /></button><div className="text-center"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Calendar</p><h2 className="text-xl font-black">{month.toLocaleDateString([], { month: "long", year: "numeric" })}</h2></div><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="rounded-xl p-2 transition hover:bg-slate-100 dark:hover:bg-white/10"><ChevronRight /></button></div><div className="grid grid-cols-7 border-b border-slate-200/70 bg-slate-50/80 text-center text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:border-white/10 dark:bg-white/[0.025]">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="p-3">{day}</div>)}</div><div className="grid grid-cols-7">{calendarDays.map((date) => { const dayTasks = filteredTasks.filter((task) => task.due_at && sameDay(new Date(task.due_at), date)); const today = sameDay(date, new Date()); return <button key={date.toISOString()} onClick={() => openCreate(date)} className={`min-h-28 border-b border-r border-slate-200/70 p-2 text-left transition hover:bg-indigo-50/70 dark:border-white/10 dark:hover:bg-indigo-400/5 ${date.getMonth() !== month.getMonth() ? "opacity-35" : ""}`}><span className={`grid h-7 w-7 place-items-center rounded-full text-xs font-bold ${today ? "bg-indigo-600 text-white" : ""}`}>{date.getDate()}</span><div className="mt-2 space-y-1">{dayTasks.slice(0, 3).map((task) => <div key={task.id} onClick={(event) => { event.stopPropagation(); openEdit(task); }} className="truncate rounded-lg bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold text-indigo-700 dark:text-indigo-200">{task.title}</div>)}{dayTasks.length > 3 && <p className="text-[10px] text-slate-400">+{dayTasks.length - 3} more</p>}</div></button>; })}</div></section>}
+
+                {view === "analytics" && <div className="grid gap-5 lg:grid-cols-2"><section className="rounded-[1.8rem] border border-slate-200/70 bg-white/80 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.045]"><h2 className="text-lg font-black">Completion by status</h2><p className="mt-1 text-sm text-slate-500">Current workload distribution</p><div className="mt-6 space-y-4">{(Object.keys(statusLabels) as TaskStatus[]).map((status) => <Metric key={status} label={statusLabels[status]} value={tasks.filter((task) => task.status === status).length} total={Math.max(tasks.length, 1)} />)}</div></section><section className="rounded-[1.8rem] border border-slate-200/70 bg-white/80 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.045]"><h2 className="text-lg font-black">Last 7 days</h2><p className="mt-1 text-sm text-slate-500">Tasks completed each day</p><div className="mt-6 flex h-56 items-end gap-3">{stats.lastSevenDays.map((day) => { const max = Math.max(...stats.lastSevenDays.map((item) => item.count), 1); return <div key={day.label} className="flex h-full flex-1 flex-col justify-end gap-2"><div className="relative flex flex-1 items-end rounded-xl bg-slate-100 dark:bg-white/5"><div className="w-full rounded-xl bg-gradient-to-t from-indigo-600 to-cyan-400" style={{ height: `${Math.max((day.count / max) * 100, day.count ? 12 : 3)}%` }} /><span className="absolute inset-x-0 top-2 text-center text-xs font-bold">{day.count}</span></div><span className="text-center text-xs text-slate-400">{day.label}</span></div>; })}</div></section></div>}
+              </div>
+
+              <aside className="hidden 2xl:block">
+                <div className="sticky top-24 space-y-5">
+                  <section className="overflow-hidden rounded-[1.8rem] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-5 text-white shadow-xl shadow-violet-600/20"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15"><BrainCircuit className="h-5 w-5" /></div><div><h2 className="font-bold">Flow Assistant</h2><p className="text-xs text-white/70">Your productivity guide</p></div></div><div className="mt-5 space-y-2">{suggestions.map((suggestion) => <div key={suggestion} className="rounded-2xl border border-white/15 bg-white/10 p-3 text-sm leading-6 backdrop-blur">{suggestion}</div>)}</div></section>
+                  <section className="rounded-[1.8rem] border border-slate-200/70 bg-white/80 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.045]"><div className="flex items-center justify-between"><div><h3 className="font-bold">Today&apos;s progress</h3><p className="text-xs text-slate-400">Keep your momentum</p></div><span className="text-2xl font-black">{stats.completionRate}%</span></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 to-fuchsia-500" style={{ width: `${stats.completionRate}%` }} /></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-slate-100 p-3 dark:bg-white/5"><p className="text-xs text-slate-400">Open</p><p className="mt-1 text-xl font-black">{stats.total - stats.completed}</p></div><div className="rounded-2xl bg-emerald-500/10 p-3"><p className="text-xs text-emerald-600 dark:text-emerald-300">Done</p><p className="mt-1 text-xl font-black">{stats.completed}</p></div></div></section>
+                </div>
+              </aside>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      {modalOpen && <TaskModal editing={editing} form={form} setForm={setForm} tagsText={tagsText} setTagsText={setTagsText} subtaskText={subtaskText} setSubtaskText={setSubtaskText} lists={lists} categories={categories} saving={saving} onClose={() => setModalOpen(false)} onSubmit={saveTask} />}
+
+      <style jsx global>{`
+        .task-field { margin-top: .5rem; width: 100%; border-radius: 1rem; border: 1px solid rgb(226 232 240); background: white; color: rgb(15 23 42); padding: .75rem .875rem; outline: none; transition: border-color .2s, box-shadow .2s; }
+        .task-field:focus { border-color: rgb(99 102 241); box-shadow: 0 0 0 3px rgb(99 102 241 / .12); }
+        select.task-field, select.task-select { color-scheme: light; }
+        select.task-field option, select.task-select option { background: white; color: rgb(15 23 42); }
+        .dark .task-field { border-color: rgb(255 255 255 / .10); background: #0b1022; color: rgb(241 245 249); }
+        .dark select.task-field, .dark select.task-select { color-scheme: dark; background-color: #0b1022; color: rgb(241 245 249); }
+        .dark select.task-field option, .dark select.task-select option { background-color: #0b1022; color: rgb(241 245 249); }
+      `}</style>
+    </main>
+  );
+}
+
+function TaskCard({ task, favorite, lists, categories, onEdit, onDelete, onDuplicate, onFavorite, onStatus }: { task: Task; favorite: boolean; lists: TaskList[]; categories: TaskCategory[]; onEdit: (task: Task) => void; onDelete: (id: number) => void; onDuplicate: (task: Task) => void; onFavorite: (id: number) => void; onStatus: (status: TaskStatus) => void }) {
+  const progress = taskProgress(task);
+  const list = lists.find((item) => item.id === task.list_id);
+  const category = categories.find((item) => item.id === task.category_id);
+  return <article className="rounded-3xl border border-slate-200 bg-white/80 p-4 transition hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.05]"><div className="flex gap-3"><button onClick={() => onStatus(task.status === "completed" ? "not_started" : "completed")} className="mt-1">{task.status === "completed" ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> : <Circle className="h-6 w-6 text-slate-400" />}</button><div className="min-w-0 flex-1"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className={`text-lg font-black ${task.status === "completed" ? "line-through opacity-60" : ""}`}>{task.title}</h3>{task.description && <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{task.description}</p>}</div><div className="flex items-center gap-1"><button onClick={() => onFavorite(task.id)} className={`rounded-xl p-2 ${favorite ? "text-amber-500" : "text-slate-400"}`}><Star className="h-4 w-4" fill={favorite ? "currentColor" : "none"} /></button><button onClick={() => void onDuplicate(task)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><Copy className="h-4 w-4" /></button><button onClick={() => onEdit(task)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10"><Pencil className="h-4 w-4" /></button><button onClick={() => void onDelete(task.id)} className="rounded-xl p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button></div></div><div className="mt-3 flex flex-wrap gap-2 text-xs">{list && <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-blue-700 dark:text-blue-300">{list.name}</span>}{category && <span className="rounded-full px-2.5 py-1 text-white" style={{ background: category.color }}>{category.name}</span>}<span className="rounded-full bg-violet-500/10 px-2.5 py-1 text-violet-700 dark:text-violet-300">{priorityMeta[task.eisenhower].label}</span>{task.repeat_rule !== "none" && <span className="rounded-full bg-cyan-500/10 px-2.5 py-1 text-cyan-700 dark:text-cyan-300">Repeats {task.repeat_rule}</span>}{task.due_at && <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-white/10">Due {new Date(task.due_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</span>}{task.tags.map((tag) => <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-white/10">#{tag}</span>)}</div>{task.subtasks.length > 0 && <div className="mt-3"><div className="mb-1 flex justify-between text-xs text-slate-500"><span>{task.subtasks.filter((item) => item.completed).length}/{task.subtasks.length} checklist</span><span>{progress}%</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-violet-600" style={{ width: `${progress}%` }} /></div></div>}</div></div></article>;
+}
+
+function CompactTask({ task, onOpen, onStatus }: { task: Task; onOpen: (task: Task) => void; onStatus: (status: TaskStatus) => void }) {
+  return <div className="rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-[#0b1022]"><button onClick={() => onOpen(task)} className="w-full text-left"><p className="font-bold">{task.title}</p>{task.due_at && <p className="mt-1 text-xs text-slate-500">{new Date(task.due_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</p>}</button><select value={task.status} onChange={(e) => onStatus(e.target.value as TaskStatus)} className="mt-3 w-full rounded-xl border border-slate-200 bg-transparent px-2 py-1.5 text-xs dark:border-white/10">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>;
+}
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return <div className="rounded-3xl border border-dashed border-slate-300 p-12 text-center dark:border-white/15"><ListTodo className="mx-auto h-10 w-10 text-slate-400" /><h2 className="mt-3 text-xl font-black">No tasks found</h2><p className="mt-1 text-sm text-slate-500">Change the filters or create a new task.</p><button onClick={onAdd} className="mt-4 rounded-2xl bg-slate-900 px-4 py-2 font-bold text-white dark:bg-white dark:text-slate-950">Add task</button></div>;
+}
+
+function Metric({ label, value, total }: { label: string; value: number; total: number }) {
+  const percent = Math.min(Math.round((value / total) * 100), 100);
+  return <div><div className="mb-1 flex justify-between text-sm"><span>{label}</span><span className="font-bold">{value}</span></div><div className="h-2 rounded-full bg-slate-100 dark:bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-violet-600" style={{ width: `${percent}%` }} /></div></div>;
+}
+
+function TaskModal({ editing, form, setForm, tagsText, setTagsText, subtaskText, setSubtaskText, lists, categories, saving, onClose, onSubmit }: { editing: Task | null; form: TaskPayload; setForm: React.Dispatch<React.SetStateAction<TaskPayload>>; tagsText: string; setTagsText: (value: string) => void; subtaskText: string; setSubtaskText: (value: string) => void; lists: TaskList[]; categories: TaskCategory[]; saving: boolean; onClose: () => void; onSubmit: (event: FormEvent) => void }) {
   const addSubtask = () => {
     const title = subtaskText.trim();
     if (!title) return;
@@ -364,119 +678,7 @@ export function TasksShell() {
     setSubtaskText("");
   };
 
-  const calendarDays = useMemo(() => {
-    const first = new Date(month.getFullYear(), month.getMonth(), 1);
-    const start = new Date(first);
-    start.setDate(first.getDate() - first.getDay());
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + index);
-      return date;
-    });
-  }, [month]);
-
-  return (
-    <main className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-white">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-[#050816]/80">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <button onClick={() => router.push("/dashboard")} className="rounded-2xl p-1"><FlowMindLogo size="md" variant="full" href="" /></button>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <button onClick={() => router.push("/settings")} className="rounded-xl border border-slate-200 p-2 dark:border-white/10"><Settings className="h-5 w-5" /></button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-[1600px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:px-8">
-        <aside className="space-y-5 rounded-[2rem] border border-slate-200 bg-white/80 p-4 shadow-xl shadow-slate-900/5 dark:border-white/10 dark:bg-white/[0.05]">
-          <button onClick={() => router.push("/dashboard")} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10"><LayoutDashboard className="h-4 w-4" /> Dashboard</button>
-          <button className="flex w-full items-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-3 py-2 text-sm font-semibold text-white"><ListTodo className="h-4 w-4" /> Tasks</button>
-
-          <div>
-            <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Lists</p><FolderPlus className="h-4 w-4 text-slate-400" /></div>
-            <button onClick={() => setListFilter("all")} className={`mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm ${listFilter === "all" ? "bg-slate-100 font-semibold dark:bg-white/10" : "text-slate-600 dark:text-slate-300"}`}><List className="h-4 w-4" /> All tasks <span className="ml-auto">{tasks.length}</span></button>
-            {lists.map((item) => ( <div key={item.id} className={`group mb-1 flex items-center rounded-xl ${ listFilter === item.id ? "bg-slate-100 font-semibold dark:bg-white/10" : "text-slate-600 dark:text-slate-300" }`} > <button type="button" onClick={() => setListFilter(item.id)} className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" > <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: item.color }} /> <span className="truncate">{item.name}</span> <span className="ml-auto"> {tasks.filter((task) => task.list_id === item.id).length} </span> </button> <button type="button" onClick={() => void removeList(item.id)} aria-label={`Delete ${item.name} list`} title="Delete list" className="mr-1 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 opacity-100 transition hover:bg-rose-500/10 hover:text-rose-600 sm:opacity-0 sm:group-hover:opacity-100 dark:hover:text-rose-400" > <Trash2 className="h-4 w-4" /> </button> </div> ))}
-            <div className="mt-2 flex gap-2"><input value={newListName} onChange={(e) => setNewListName(e.target.value)} placeholder="New list" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-white/10" /><button onClick={() => void addList()} className="rounded-xl bg-slate-900 p-2 text-white dark:bg-white dark:text-slate-950"><Plus className="h-4 w-4" /></button></div>
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Categories</p>
-            <div className="flex flex-wrap gap-2"> {categories.map((category) => ( <div key={category.id} className="group flex items-center gap-1 rounded-full py-1 pl-2.5 pr-1 text-xs font-semibold text-white" style={{ background: category.color }} > <span>{category.name}</span> <button type="button" onClick={() => void removeCategory(category.id)} aria-label={`Delete ${category.name} category`} title="Delete category" className="grid h-5 w-5 place-items-center rounded-full text-white/70 transition hover:bg-black/20 hover:text-white" > <X className="h-3 w-3" /> </button> </div> ))} </div>
-            <div className="mt-2 flex gap-2"><input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category" className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-transparent px-3 py-2 text-sm dark:border-white/10" /><button onClick={() => void addCategory()} className="rounded-xl bg-slate-900 p-2 text-white dark:bg-white dark:text-slate-950"><Plus className="h-4 w-4" /></button></div>
-          </div>
-        </aside>
-
-        <section className="min-w-0 space-y-5">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <div><p className="text-sm font-semibold text-blue-600 dark:text-cyan-300">FlowMind Tasks</p><h1 className="text-3xl font-black tracking-tight">Plan clearly. Finish calmly.</h1></div>
-            <button onClick={() => openCreate()} className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-bold text-white shadow-lg shadow-blue-600/20"><Plus className="h-5 w-5" /> Add task</button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {[{ label: "All tasks", value: stats.total, icon: ListTodo }, { label: "Due today", value: stats.dueToday, icon: CalendarDays }, { label: "Overdue", value: stats.overdue, icon: Clock3 }, { label: "Completed", value: stats.completed, icon: CheckCircle2 }].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-3xl border border-slate-200 bg-white/80 p-4 dark:border-white/10 dark:bg-white/[0.05]"><div className="flex items-center justify-between"><p className="text-sm text-slate-500 dark:text-slate-400">{label}</p><Icon className="h-4 w-4" /></div><p className="mt-2 text-3xl font-black">{value}</p></div>)}
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white/80 p-3 dark:border-white/10 dark:bg-white/[0.05] md:flex-row">
-            <label className="flex flex-1 items-center gap-2 rounded-2xl bg-slate-100 px-3 dark:bg-white/10"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, notes, or tags" className="w-full bg-transparent py-2.5 text-sm outline-none" /></label>
-            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 text-slate-700 transition-colors dark:border-white/10 dark:bg-white/5 dark:text-slate-200"> <Filter className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" /> <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | TaskStatus) } aria-label="Filter tasks by status" className="min-w-36 cursor-pointer bg-transparent py-2 text-sm font-medium text-slate-700 outline-none [color-scheme:light] dark:text-slate-200 dark:[color-scheme:dark]" > <option value="all" className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100" > All statuses </option> {Object.entries(statusLabels).map(([value, label]) => ( <option key={value} value={value} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100" > {label} </option> ))} </select> </label>
-            <div className="flex rounded-2xl bg-slate-100 p-1 dark:bg-white/10"><button onClick={() => setView("list")} className={`rounded-xl p-2 ${view === "list" ? "bg-white shadow dark:bg-white/15" : ""}`}><List className="h-4 w-4" /></button><button onClick={() => setView("calendar")} className={`rounded-xl p-2 ${view === "calendar" ? "bg-white shadow dark:bg-white/15" : ""}`}><CalendarDays className="h-4 w-4" /></button></div>
-          </div>
-
-          {error && <div className="rounded-2xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">{error}</div>}
-
-          {loading ? (
-            <SpinnerLoader
-              label="Loading your tasks..."
-              className="min-h-72"
-            />
-          ) : view === "list" ? (
-            <div className="space-y-3">
-              {filteredTasks.length === 0 && <div className="rounded-[2rem] border border-dashed border-slate-300 p-12 text-center dark:border-white/15"><ListTodo className="mx-auto h-10 w-10 text-slate-300" /><h2 className="mt-3 text-xl font-bold">No tasks here yet</h2><p className="mt-1 text-sm text-slate-500">Create a task or change the current filters.</p></div>}
-              {filteredTasks.map((task) => {
-                const category = categories.find((item) => item.id === task.category_id);
-                const completeCount = task.subtasks.filter((item) => item.completed).length;
-                return <article key={task.id} className="group rounded-[1.6rem] border border-slate-200 bg-white/85 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-white/10 dark:bg-white/[0.05]">
-                  <div className="flex gap-3">
-                    <button onClick={() => void toggleComplete(task)} className="mt-0.5 shrink-0">{task.status === "completed" ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> : <Circle className="h-6 w-6 text-slate-300 hover:text-blue-500" />}</button>
-                    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className={`font-bold ${task.status === "completed" ? "text-slate-400 line-through" : ""}`}>{task.title}</h3><span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${priorityMeta[task.eisenhower].className}`}>{priorityMeta[task.eisenhower].label}</span>{category && <span className="rounded-full px-2.5 py-1 text-[11px] font-bold text-white" style={{ background: category.color }}>{category.name}</span>}</div>{task.description && <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{task.description}</p>}<div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">{task.due_at && <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-white/10"><CalendarDays className="h-3 w-3" />{new Date(task.due_at).toLocaleString([], { dateStyle: "medium", timeStyle: task.is_all_day ? undefined : "short" })}</span>}{task.reminder_enabled && <span className="flex items-center gap-1 rounded-full bg-violet-500/10 px-2.5 py-1 text-violet-600 dark:text-violet-300"><Bell className="h-3 w-3" /> Reminder</span>}{task.repeat_rule !== "none" && <span className="rounded-full bg-blue-500/10 px-2.5 py-1 text-blue-600 dark:text-blue-300">Repeats {task.repeat_rule}</span>}{task.subtasks.length > 0 && <span>{completeCount}/{task.subtasks.length} subtasks</span>}{task.tags.map((tag) => <span key={tag}>#{tag}</span>)}</div></div>
-                    <div className="flex shrink-0 gap-1"><button onClick={() => openEdit(task)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-white/10"><Pencil className="h-4 w-4" /></button><button onClick={() => void removeTask(task.id)} className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"><Trash2 className="h-4 w-4" /></button></div>
-                  </div>
-                </article>;
-              })}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white/85 dark:border-white/10 dark:bg-white/[0.05]">
-              <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-white/10"><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/10"><ChevronLeft /></button><h2 className="text-lg font-black">{month.toLocaleDateString([], { month: "long", year: "numeric" })}</h2><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/10"><ChevronRight /></button></div>
-              <div className="grid grid-cols-7 border-b border-slate-200 text-center text-xs font-bold uppercase tracking-wider text-slate-400 dark:border-white/10">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <div key={day} className="p-3">{day}</div>)}</div>
-              <div className="grid grid-cols-7">{calendarDays.map((date) => { const dayTasks = filteredTasks.filter((task) => task.due_at && sameDay(new Date(task.due_at), date)); const active = date.getMonth() === month.getMonth(); return <button key={date.toISOString()} onClick={() => openCreate(new Date(date))} className={`min-h-28 border-b border-r border-slate-200 p-2 text-left align-top dark:border-white/10 ${active ? "" : "bg-slate-50/70 text-slate-300 dark:bg-black/10 dark:text-slate-600"}`}><span className={`inline-grid h-7 w-7 place-items-center rounded-full text-xs font-bold ${sameDay(date, new Date()) ? "bg-blue-600 text-white" : ""}`}>{date.getDate()}</span><div className="mt-1 space-y-1">{dayTasks.slice(0, 3).map((task) => <div key={task.id} onClick={(event) => { event.stopPropagation(); openEdit(task); }} className="truncate rounded-md bg-blue-500/10 px-1.5 py-1 text-[10px] font-semibold text-blue-700 dark:text-blue-300">{task.title}</div>)}{dayTasks.length > 3 && <p className="text-[10px] text-slate-400">+{dayTasks.length - 3} more</p>}</div></button>; })}</div>
-            </div>
-          )}
-        </section>
-      </div>
-
-      {modalOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-5 shadow-2xl dark:bg-[#0b1022] sm:p-7"><div className="mb-5 flex items-center justify-between"><div><p className="text-sm font-semibold text-blue-600 dark:text-cyan-300">{editing ? "Edit task" : "New task"}</p><h2 className="text-2xl font-black">Task details</h2></div><button onClick={() => setModalOpen(false)} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/10"><X /></button></div>
-        <form onSubmit={saveTask} className="space-y-5">
-          <div><label className="text-sm font-bold">Title</label><input required value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-blue-500 dark:border-white/10" placeholder="What needs to be done?" /></div>
-          <div><label className="text-sm font-bold">Notes</label><textarea value={form.description ?? ""} onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))} className="mt-2 min-h-24 w-full rounded-2xl border border-slate-200 bg-transparent px-4 py-3 outline-none focus:border-blue-500 dark:border-white/10" placeholder="Add useful details..." /></div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="List"><select value={form.list_id ?? ""} onChange={(e) => setForm((current) => ({ ...current, list_id: e.target.value ? Number(e.target.value) : null }))} className="field"><option value="">No list</option>{lists.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
-            <Field label="Category"><select value={form.category_id ?? ""} onChange={(e) => setForm((current) => ({ ...current, category_id: e.target.value ? Number(e.target.value) : null }))} className="field"><option value="">No category</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field>
-            <Field label="Status"><select value={form.status} onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as TaskStatus }))} className="field">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-            <Field label="Eisenhower priority"><select value={form.eisenhower} onChange={(e) => setForm((current) => ({ ...current, eisenhower: e.target.value as EisenhowerPriority }))} className="field">{Object.entries(priorityMeta).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></Field>
-            <Field label="Energy"><select value={form.energy_level} onChange={(e) => setForm((current) => ({ ...current, energy_level: e.target.value as EnergyLevel }))} className="field"><option value="low">Low energy</option><option value="medium">Medium energy</option><option value="high">High focus</option></select></Field>
-            <Field label="Repeat"><select value={form.repeat_rule} onChange={(e) => setForm((current) => ({ ...current, repeat_rule: e.target.value as RepeatRule }))} className="field"><option value="none">Never</option><option value="daily">Daily</option><option value="weekdays">Weekdays</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></Field>
-            <Field label="Start"><input type="datetime-local" value={toInputDate(form.start_at)} onChange={(e) => setForm((current) => ({ ...current, start_at: toApiDate(e.target.value) }))} className="field" /></Field>
-            <Field label="Due"><input type="datetime-local" value={toInputDate(form.due_at)} onChange={(e) => setForm((current) => ({ ...current, due_at: toApiDate(e.target.value) }))} className="field" /></Field>
-            <Field label="Reminder"><input type="datetime-local" value={toInputDate(form.reminder_at)} onChange={(e) => setForm((current) => ({ ...current, reminder_at: toApiDate(e.target.value), reminder_enabled: Boolean(e.target.value) }))} className="field" /></Field>
-          </div>
-          <div> <label className="text-sm font-bold">Tags</label> <div className="mt-2 rounded-2xl border border-slate-200 px-3 py-2 dark:border-white/10"> <div className="flex items-center gap-2"> <Tag className="h-4 w-4 shrink-0 text-slate-400" /> <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} className="w-full bg-transparent py-1 outline-none" placeholder="assignment, urgent, reading" /> </div> {tagsText .split(",") .map((tag) => tag.trim().replace(/^#/, "")) .filter(Boolean).length > 0 && ( <div className="mt-2 flex flex-wrap gap-2 border-t border-slate-200 pt-2 dark:border-white/10"> {tagsText .split(",") .map((tag) => tag.trim().replace(/^#/, "")) .filter(Boolean) .map((tag) => ( <span key={tag} className="flex items-center gap-1 rounded-full bg-violet-500/10 py-1 pl-2.5 pr-1 text-xs font-semibold text-violet-700 dark:text-violet-300" > #{tag} <button type="button" onClick={() => removeTag(tag)} aria-label={`Remove ${tag} tag`} title="Remove tag" className="grid h-5 w-5 place-items-center rounded-full transition hover:bg-violet-500/15" > <X className="h-3 w-3" /> </button> </span> ))} </div> )} </div> </div>
-          <div><label className="text-sm font-bold">Subtasks</label><div className="mt-2 flex gap-2"><input value={subtaskText} onChange={(e) => setSubtaskText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubtask(); } }} className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-transparent px-4 py-3 outline-none dark:border-white/10" placeholder="Add a smaller step" /><button type="button" onClick={addSubtask} className="rounded-2xl bg-slate-900 px-4 text-white dark:bg-white dark:text-slate-950"><Plus /></button></div><div className="mt-2 space-y-2">{form.subtasks.map((item) => <div key={item.id} className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 dark:bg-white/10"><button type="button" onClick={() => setForm((current) => ({ ...current, subtasks: current.subtasks.map((subtask) => subtask.id === item.id ? { ...subtask, completed: !subtask.completed } : subtask) }))}>{item.completed ? <Check className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4" />}</button><span className={`flex-1 text-sm ${item.completed ? "line-through opacity-60" : ""}`}>{item.title}</span><button type="button" onClick={() => setForm((current) => ({ ...current, subtasks: current.subtasks.filter((subtask) => subtask.id !== item.id) }))}><X className="h-4 w-4" /></button></div>)}</div></div>
-          <label className="flex items-center gap-3 rounded-2xl bg-violet-500/10 p-3 text-sm"><input type="checkbox" checked={form.reminder_enabled} onChange={(e) => setForm((current) => ({ ...current, reminder_enabled: e.target.checked, reminder_at: e.target.checked ? current.reminder_at : null }))} /><Bell className="h-4 w-4 text-violet-500" /> Enable Flow Assistant reminder</label>
-          <div className="flex justify-end gap-3"><button type="button" onClick={() => setModalOpen(false)} className="rounded-2xl border border-slate-200 px-5 py-3 font-bold dark:border-white/10">Cancel</button><button disabled={saving} className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editing ? "Save changes" : "Create task"}</button></div>
-        </form></div></div>}
-      <style jsx global>{`.field{margin-top:.5rem;width:100%;border-radius:1rem;border:1px solid rgb(226 232 240);background:transparent;padding:.75rem;outline:none}.dark .field{border-color:rgba(255,255,255,.1)}.field:focus{border-color:#4a6ded}`}</style>
-    </main>
-  );
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] bg-white p-5 shadow-2xl dark:bg-[#0b1022] sm:p-7"><div className="mb-5 flex items-center justify-between"><div><p className="text-sm font-semibold text-blue-600 dark:text-cyan-300">{editing ? "Edit task" : "New task"}</p><h2 className="text-2xl font-black">Task details</h2></div><button onClick={onClose} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/10"><X /></button></div><form onSubmit={onSubmit} className="space-y-5"><div><label className="text-sm font-bold">Title</label><input required value={form.title} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} className="task-field" placeholder="What needs to be done?" /></div><div><label className="text-sm font-bold">Notes</label><textarea value={form.description ?? ""} onChange={(e) => setForm((current) => ({ ...current, description: e.target.value }))} className="task-field min-h-24" placeholder="Add useful details..." /></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="List"><select value={form.list_id ?? ""} onChange={(e) => setForm((current) => ({ ...current, list_id: e.target.value ? Number(e.target.value) : null }))} className="task-field"><option value="">No list</option>{lists.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label="Category"><select value={form.category_id ?? ""} onChange={(e) => setForm((current) => ({ ...current, category_id: e.target.value ? Number(e.target.value) : null }))} className="task-field"><option value="">No category</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label="Status"><select value={form.status} onChange={(e) => setForm((current) => ({ ...current, status: e.target.value as TaskStatus }))} className="task-field">{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field><Field label="Eisenhower priority"><select value={form.eisenhower} onChange={(e) => setForm((current) => ({ ...current, eisenhower: e.target.value as EisenhowerPriority }))} className="task-field">{Object.entries(priorityMeta).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}</select></Field><Field label="Energy"><select value={form.energy_level} onChange={(e) => setForm((current) => ({ ...current, energy_level: e.target.value as EnergyLevel }))} className="task-field"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></Field><Field label="Repeat"><select value={form.repeat_rule} onChange={(e) => setForm((current) => ({ ...current, repeat_rule: e.target.value as RepeatRule }))} className="task-field"><option value="none">Never</option><option value="daily">Daily</option><option value="weekdays">Weekdays</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></Field><Field label="Repeat every"><input type="number" min={1} max={365} value={form.repeat_interval} onChange={(e) => setForm((current) => ({ ...current, repeat_interval: Number(e.target.value) || 1 }))} className="task-field" /></Field><Field label="Start"><input type="datetime-local" value={toInputDate(form.start_at)} onChange={(e) => setForm((current) => ({ ...current, start_at: toApiDate(e.target.value) }))} className="task-field" /></Field><Field label="Due"><input type="datetime-local" value={toInputDate(form.due_at)} onChange={(e) => setForm((current) => ({ ...current, due_at: toApiDate(e.target.value) }))} className="task-field" /></Field><Field label="Repeat until"><input type="datetime-local" value={toInputDate(form.repeat_until)} onChange={(e) => setForm((current) => ({ ...current, repeat_until: toApiDate(e.target.value) }))} className="task-field" /></Field><Field label="Reminder"><input type="datetime-local" value={toInputDate(form.reminder_at)} onChange={(e) => setForm((current) => ({ ...current, reminder_at: toApiDate(e.target.value), reminder_enabled: Boolean(e.target.value) }))} className="task-field" /></Field><label className="flex items-center gap-3 rounded-2xl bg-violet-500/10 p-3 text-sm"><input type="checkbox" checked={form.is_all_day} onChange={(e) => setForm((current) => ({ ...current, is_all_day: e.target.checked }))} /> All-day task</label></div><div><label className="text-sm font-bold">Tags</label><div className="task-field flex items-center gap-2"><Tag className="h-4 w-4 text-slate-400" /><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} className="w-full bg-transparent outline-none" placeholder="assignment, urgent, reading" /></div></div><div><label className="text-sm font-bold">Checklist</label><div className="mt-2 flex gap-2"><input value={subtaskText} onChange={(e) => setSubtaskText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSubtask(); } }} className="task-field mt-0 min-w-0 flex-1" placeholder="Add a smaller step" /><button type="button" onClick={addSubtask} className="rounded-2xl bg-slate-900 px-4 text-white dark:bg-white dark:text-slate-950"><Plus /></button></div><div className="mt-2 space-y-2">{form.subtasks.map((item) => <div key={item.id} className="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 dark:bg-white/10"><button type="button" onClick={() => setForm((current) => ({ ...current, subtasks: current.subtasks.map((subtask) => subtask.id === item.id ? { ...subtask, completed: !subtask.completed } : subtask) }))}>{item.completed ? <Check className="h-4 w-4 text-emerald-500" /> : <Circle className="h-4 w-4" />}</button><span className={`flex-1 text-sm ${item.completed ? "line-through opacity-60" : ""}`}>{item.title}</span><button type="button" onClick={() => setForm((current) => ({ ...current, subtasks: current.subtasks.filter((subtask) => subtask.id !== item.id) }))}><X className="h-4 w-4" /></button></div>)}</div></div><label className="flex items-center gap-3 rounded-2xl bg-violet-500/10 p-3 text-sm"><input type="checkbox" checked={form.reminder_enabled} onChange={(e) => setForm((current) => ({ ...current, reminder_enabled: e.target.checked, reminder_at: e.target.checked ? current.reminder_at : null }))} /><Bell className="h-4 w-4 text-violet-500" /> Enable browser reminder</label><div className="flex justify-end gap-3"><button type="button" onClick={onClose} className="rounded-2xl border border-slate-200 px-5 py-3 font-bold dark:border-white/10">Cancel</button><button disabled={saving} className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-5 py-3 font-bold text-white disabled:opacity-60">{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editing ? "Save changes" : "Create task"}</button></div></form></div></div>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
