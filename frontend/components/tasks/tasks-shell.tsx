@@ -2,6 +2,9 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
+import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import {
   Archive,
   BarChart3,
@@ -34,8 +37,6 @@ import {
 } from "lucide-react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
-import { SpinnerLoader } from "@/components/common/spinner-loader";
-import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   createTask,
@@ -165,7 +166,6 @@ export function TasksShell() {
   const [lists, setLists] = useState<TaskList[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -216,9 +216,6 @@ export function TasksShell() {
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Unable to load tasks");
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
 
     return () => {
       cancelled = true;
@@ -532,22 +529,29 @@ export function TasksShell() {
     if (permission !== "granted") setError("Browser notification permission was not granted.");
   };
 
-  if (loading) return <SpinnerLoader fullScreen label="Loading your task workspace..." />;
-
   return (
-    <main className="relative min-h-screen overflow-x-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50">
+    <motion.main 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }} 
+      transition={{ 
+        duration: 0.22, 
+        ease: "easeOut", 
+        }} 
+        className="relative min-h-screen overflow-x-hidden bg-[#f5f7fb] text-slate-950 dark:bg-[#050713] dark:text-slate-50"
+    >
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(74,109,237,0.13),transparent_32%),radial-gradient(circle_at_85%_10%,rgba(207,77,225,0.12),transparent_28%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,242,253,0.08),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(189,67,254,0.10),transparent_30%)]" />
 
-      <div className="relative min-h-screen xl:pl-[248px]">
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] border-r border-slate-200/70 bg-white/90 p-5 shadow-[12px_0_40px_rgba(15,23,42,0.04)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#070a18]/95 dark:shadow-none xl:block">
-          <div className="h-screen overflow-y-auto">
-            <WorkspaceNavigation
-              counts={{
-                tasks: tasks.length,
-              }}
-            />
-          </div>
-        </aside>
+        <WorkspaceSidebar
+          taskCount={tasks.length}
+          insightTitle="Task momentum"
+          insightText={
+            stats.overdue > 0
+              ? `${stats.overdue} overdue task${stats.overdue === 1 ? "" : "s"} need attention.`
+              : "Your task workspace is clear and ready for focused progress."
+          }
+        />
+
+        <div className="relative min-h-screen xl:pl-[272px]">
 
         <section className="min-w-0">
           <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f5f7fb]/80 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/80">
@@ -853,7 +857,7 @@ export function TasksShell() {
         .dark select.task-field, .dark select.task-select { color-scheme: dark; background-color: #0b1022; color: rgb(241 245 249); }
         .dark select.task-field option, .dark select.task-select option { background-color: #0b1022; color: rgb(241 245 249); }
       `}</style>
-    </main>
+    </motion.main>
   );
 }
 

@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
+import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
-  BarChart3,
   Bell,
   Brain,
   CalendarDays,
@@ -14,15 +15,12 @@ import {
   Clock3,
   Flame,
   Focus,
-  LayoutDashboard,
   ListTodo,
   LogOut,
   MessageCircle,
   MoreHorizontal,
   Search,
-  Settings,
   Sparkles,
-  Target,
   Timer,
   TrendingUp,
 } from "lucide-react";
@@ -32,73 +30,6 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { logoutUser } from "@/lib/api";
 
 import { DashboardLoader } from "./dashboard-loader";
-
-const sidebarItems = [
-  {
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    active: true,
-    href: "/dashboard",
-  },
-  {
-    label: "Tasks",
-    icon: ListTodo,
-    href: "/tasks",
-  },
-  {
-    label: "Habits",
-    icon: Flame,
-    href: "/habits",
-  },
-  {
-    label: "Focus",
-    icon: Timer,
-  },
-  {
-    label: "Schedule",
-    icon: CalendarDays,
-  },
-  {
-    label: "Analytics",
-    icon: BarChart3,
-  },
-  {
-    label: "Flow Assistant",
-    icon: Brain,
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/settings",
-  },
-];
-
-const mobileNavigationItems = [
-  {
-    label: "Home",
-    icon: LayoutDashboard,
-    active: true,
-    href: "/dashboard",
-  },
-  {
-    label: "Tasks",
-    icon: ListTodo,
-    href: "/tasks",
-  },
-  {
-    label: "Focus",
-    icon: Target,
-  },
-  {
-    label: "Habits",
-    icon: Flame,
-    href: "/habits",
-  },
-  {
-    label: "Assistant",
-    icon: Brain,
-  },
-];
 
 const stats = [
   {
@@ -291,93 +222,20 @@ export function DashboardShell() {
         <div className="pointer-events-none fixed right-0 top-32 h-96 w-96 rounded-full bg-fuchsia-500/15 blur-3xl dark:bg-fuchsia-500/10" />
 
         {/* Desktop sidebar */}
-        <aside className="fixed inset-y-0 left-0 z-50 hidden w-72 border-r border-slate-200/75 bg-white/92 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#070a1a]/94 lg:flex lg:flex-col">
-          {/* Sidebar brand */}
-          <div className="shrink-0 border-b border-slate-200/70 px-5 py-5 dark:border-slate-800/70">
-            <FlowMindLogo size="md" variant="full" href="" />
-          </div>
-
-          {/* Independent scrollable navigation */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
-            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-              Workspace
-            </p>
-
-            <nav className="space-y-1.5" aria-label="Dashboard navigation">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => {
-                      if (item.href) {
-                        router.push(item.href);
-                      }
-                    }}
-                    className={`group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200 ${
-                      item.active
-                        ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 dark:bg-white dark:text-slate-950"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-                    }`}
-                  >
-                    <Icon
-                      className={`h-5 w-5 shrink-0 transition-transform duration-200 ${
-                        item.active ? "" : "group-hover:scale-105"
-                      }`}
-                    />
-
-                    <span className="min-w-0 flex-1 truncate">
-                      {item.label}
-                    </span>
-
-                    {item.active && (
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300 dark:bg-indigo-500" />
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-
-          {/* Fixed sidebar assistant area */}
-          <div className="shrink-0 border-t border-slate-200/70 bg-white/60 p-4 backdrop-blur-xl dark:border-slate-800/70 dark:bg-[#070a1a]/70">
-            <button
-              type="button"
-              className="group w-full rounded-3xl border border-cyan-200/70 bg-cyan-50/85 p-4 text-left transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-lg hover:shadow-cyan-500/10 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:hover:border-cyan-400/35"
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl aurora-gradient text-white shadow-lg shadow-indigo-500/20">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">Flow Assistant</h3>
-
-                    <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Online
-                    </span>
-                  </div>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-400">
-                    Get smart guidance without leaving your workspace.
-                  </p>
-                </div>
-              </div>
-            </button>
-          </div>
-        </aside>
+        <WorkspaceSidebar
+          taskCount={tasks.length}
+          habitCount={habits.length}
+          insightTitle="Flow Assistant"
+          insightText="Review your day, protect your focus, and keep your progress moving."
+        />
 
         {/* Dashboard content */}
-        <div className="relative min-h-screen lg:pl-72">
+        <div className="relative min-h-screen xl:pl-[272px]">
           {/* Sticky dashboard header */}
           <header className="sticky top-0 z-40 border-b border-slate-200/75 bg-slate-50/88 px-4 py-3 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#050816]/88 sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3">
               {/* Mobile logo */}
-              <div className="min-w-0 lg:hidden">
+              <div className="min-w-0 xl:hidden">
                 <FlowMindLogo
                   variant="full"
                   size="sm"
@@ -387,7 +245,7 @@ export function DashboardShell() {
               </div>
 
               {/* Desktop greeting */}
-              <div className="hidden min-w-0 lg:block">
+              <div className="hidden min-w-0 xl:block">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Good morning, Asas 👋
                 </p>
@@ -825,34 +683,13 @@ export function DashboardShell() {
         </button>
 
         {/* Mobile bottom navigation */}
-        <nav
-          aria-label="Mobile navigation"
-          className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-3xl border border-slate-200/80 bg-white/88 p-2 shadow-2xl shadow-slate-900/15 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/88 lg:hidden"
-        >
-          {mobileNavigationItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <button
-                key={item.label}
-                type="button"
-                onClick={() => {
-                  if (item.href) {
-                    router.push(item.href);
-                  }
-                }}
-                className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition sm:text-xs ${
-                  item.active
-                    ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"
-                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="max-w-full truncate">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <WorkspaceNavigation
+          variant="mobile"
+          counts={{
+            tasks: tasks.length,
+            habits: habits.length,
+          }}
+        />
       </motion.main>
     </>
   );
