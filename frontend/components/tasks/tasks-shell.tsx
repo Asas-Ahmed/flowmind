@@ -575,7 +575,7 @@ export function TasksShell() {
         <section className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f5f7fb]/80 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/80">
             <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-              <button onClick={() => router.push("/dashboard")} className="xl:hidden"><FlowMindLogo size="sm" variant="icon" href="" /></button>
+              <button onClick={() => router.push("/dashboard")} className="xl:hidden"><FlowMindLogo size="sm" variant="mark" href="" /></button>
               <div className="hidden min-w-0 md:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Task workspace</p><h1 className="truncate text-lg font-bold">Plan clearly. Finish calmly.</h1></div>
               <label className="mx-auto flex max-w-xl flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 shadow-sm dark:border-white/10 dark:bg-white/5"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, notes or tags..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" /></label>
               <button onClick={() => void requestNotifications()} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300" title="Enable browser reminders"><Bell className="h-5 w-5" /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#0a0d1c]" /></button>
@@ -596,13 +596,74 @@ export function TasksShell() {
             {error && <div className="flex items-center justify-between rounded-2xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200"><span>{error}</span><button onClick={() => setError("")} className="rounded-lg p-1 hover:bg-rose-500/10"><X className="h-4 w-4" /></button></div>}
 
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              {[
-                ["All tasks", stats.total, ListTodo, "Total workload", "from-indigo-500 to-blue-500"],
-                ["Due today", stats.dueToday, CalendarDays, "Needs attention", "from-cyan-500 to-blue-500"],
-                ["Overdue", stats.overdue, Clock3, "Past deadline", "from-rose-500 to-orange-500"],
-                ["Completed", stats.completedToday, CheckCircle2, "Finished today", "from-emerald-500 to-teal-500"],
-                ["Completion", `${stats.completionRate}%`, BarChart3, `${stats.completed} of ${stats.total} tasks`, "from-violet-500 to-fuchsia-500"],
-              ].map(([label, value, Icon, helper, gradient]) => <article key={String(label)} className="group rounded-[1.6rem] border border-slate-200/70 bg-white/80 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-white/[0.045]"><div className="flex items-start justify-between"><div className={`grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-lg`}><Icon className="h-4.5 w-4.5" /></div><span className="text-xs text-slate-400">{String(helper)}</span></div><p className="mt-5 text-sm font-medium text-slate-500 dark:text-slate-400">{String(label)}</p><p className="mt-1 text-3xl font-black tracking-tight">{String(value)}</p></article>)}
+              {(
+                [
+                  {
+                    label: "All tasks",
+                    value: stats.total,
+                    icon: ListTodo,
+                    helper: "Total workload",
+                    gradient: "from-indigo-500 to-blue-500",
+                  },
+                  {
+                    label: "Due today",
+                    value: stats.dueToday,
+                    icon: CalendarDays,
+                    helper: "Needs attention",
+                    gradient: "from-cyan-500 to-blue-500",
+                  },
+                  {
+                    label: "Overdue",
+                    value: stats.overdue,
+                    icon: Clock3,
+                    helper: "Past deadline",
+                    gradient: "from-rose-500 to-orange-500",
+                  },
+                  {
+                    label: "Completed",
+                    value: stats.completedToday,
+                    icon: CheckCircle2,
+                    helper: "Finished today",
+                    gradient: "from-emerald-500 to-teal-500",
+                  },
+                  {
+                    label: "Completion",
+                    value: `${stats.completionRate}%`,
+                    icon: BarChart3,
+                    helper: `${stats.completed} of ${stats.total} tasks`,
+                    gradient: "from-violet-500 to-fuchsia-500",
+                  },
+                ] satisfies Array<{
+                  label: string;
+                  value: string | number;
+                  icon: React.ComponentType<{ className?: string }>;
+                  helper: string;
+                  gradient: string;
+                }>
+              ).map(({ label, value, icon: Icon, helper, gradient }) => (
+                <article
+                  key={label}
+                  className="group rounded-[1.6rem] border border-slate-200/70 bg-white/80 p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-white/[0.045]"
+                >
+                  <div className="flex items-start justify-between">
+                    <div
+                      className={`grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-lg`}
+                    >
+                      <Icon className="h-[18px] w-[18px]" />
+                    </div>
+
+                    <span className="text-xs text-slate-400">{helper}</span>
+                  </div>
+
+                  <p className="mt-5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                    {label}
+                  </p>
+
+                  <p className="mt-1 text-3xl font-black tracking-tight">
+                    {value}
+                  </p>
+                </article>
+              ))}
             </section>
 
             <section className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">

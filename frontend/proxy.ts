@@ -6,6 +6,7 @@ const protectedRoutes = [
   "/dashboard",
   "/settings",
   "/tasks",
+  "/habits",
 ];
 
 const authRoutes = [
@@ -54,5 +55,6 @@ export const config = {
     "/login",
     "/register",
     "/forgot-password",
+    "/habits/:path*",
   ],
 };

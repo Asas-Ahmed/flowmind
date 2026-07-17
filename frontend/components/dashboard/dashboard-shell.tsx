@@ -48,6 +48,7 @@ const sidebarItems = [
   {
     label: "Habits",
     icon: Flame,
+    href: "/habits",
   },
   {
     label: "Focus",
@@ -91,6 +92,7 @@ const mobileNavigationItems = [
   {
     label: "Habits",
     icon: Flame,
+    href: "/habits",
   },
   {
     label: "Assistant",

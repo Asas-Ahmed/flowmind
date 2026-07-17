@@ -8,6 +8,8 @@ from app.database.database import Base, engine
 from app.models.user import User
 from app.models.user_profile import UserProfile
 from app.models.task import Task, TaskCategory, TaskList
+from app.api.habits import router as habits_router
+from app.models.habit import Habit, HabitCompletion
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,7 +29,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(tasks_router)
-
+app.include_router(habits_router)
 
 @app.get("/")
 def root():

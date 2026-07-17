@@ -6,6 +6,13 @@ import type {
   TaskWorkspace,
 } from "@/types/task";
 
+import type {
+  Habit,
+  HabitCompletion,
+  HabitPayload,
+  HabitWorkspace,
+} from "@/types/habit";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -259,4 +266,41 @@ export function createTaskCategory(name: string, color: string) {
 
 export function deleteTaskCategory(categoryId: number) {
   return apiRequest<void>(`/api/tasks/categories/${categoryId}`, { method: "DELETE" });
+}
+
+export function getHabitWorkspace(targetDate?: string) {
+  const query = targetDate ? `?target_date=${encodeURIComponent(targetDate)}` : "";
+  return apiRequest<HabitWorkspace>(`/api/habits/workspace${query}`, {
+    method: "GET",
+  });
+}
+
+export function createHabit(payload: HabitPayload) {
+  return apiRequest<Habit>("/api/habits", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateHabit(habitId: number, payload: Partial<HabitPayload>) {
+  return apiRequest<Habit>(`/api/habits/${habitId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteHabit(habitId: number) {
+  return apiRequest<void>(`/api/habits/${habitId}`, {
+    method: "DELETE",
+  });
+}
+
+export function checkInHabit(
+  habitId: number,
+  payload: { completion_date: string; count: number; note?: string | null },
+) {
+  return apiRequest<HabitCompletion | null>(`/api/habits/${habitId}/check-in`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
