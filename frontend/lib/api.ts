@@ -1,3 +1,11 @@
+import type {
+  Task,
+  TaskCategory,
+  TaskList,
+  TaskPayload,
+  TaskWorkspace,
+} from "@/types/task";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -208,4 +216,47 @@ export function updateUserProfile(
     method: "PUT",
     body: JSON.stringify(profile),
   });
+}
+export function getTaskWorkspace() {
+  return apiRequest<TaskWorkspace>("/api/tasks/workspace", { method: "GET" });
+}
+
+export function createTask(payload: TaskPayload) {
+  return apiRequest<Task>("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTask(taskId: number, payload: Partial<TaskPayload>) {
+  return apiRequest<Task>(`/api/tasks/${taskId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTask(taskId: number) {
+  return apiRequest<void>(`/api/tasks/${taskId}`, { method: "DELETE" });
+}
+
+export function createTaskList(name: string, color: string) {
+  return apiRequest<TaskList>("/api/tasks/lists", {
+    method: "POST",
+    body: JSON.stringify({ name, color, icon: "list" }),
+  });
+}
+
+export function deleteTaskList(listId: number) {
+  return apiRequest<void>(`/api/tasks/lists/${listId}`, { method: "DELETE" });
+}
+
+export function createTaskCategory(name: string, color: string) {
+  return apiRequest<TaskCategory>("/api/tasks/categories", {
+    method: "POST",
+    body: JSON.stringify({ name, color }),
+  });
+}
+
+export function deleteTaskCategory(categoryId: number) {
+  return apiRequest<void>(`/api/tasks/categories/${categoryId}`, { method: "DELETE" });
 }

@@ -43,6 +43,7 @@ const sidebarItems = [
   {
     label: "Tasks",
     icon: ListTodo,
+    href: "/tasks",
   },
   {
     label: "Habits",
@@ -76,10 +77,12 @@ const mobileNavigationItems = [
     label: "Home",
     icon: LayoutDashboard,
     active: true,
+    href: "/dashboard",
   },
   {
     label: "Tasks",
     icon: ListTodo,
+    href: "/tasks",
   },
   {
     label: "Focus",
@@ -831,6 +834,11 @@ export function DashboardShell() {
               <button
                 key={item.label}
                 type="button"
+                onClick={() => {
+                  if (item.href) {
+                    router.push(item.href);
+                  }
+                }}
                 className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 text-[10px] font-medium transition sm:text-xs ${
                   item.active
                     ? "bg-slate-950 text-white dark:bg-white dark:text-slate-950"

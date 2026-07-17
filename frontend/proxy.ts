@@ -5,6 +5,7 @@ const ACCESS_COOKIE_NAME = "flowmind_access_token";
 const protectedRoutes = [
   "/dashboard",
   "/settings",
+  "/tasks",
 ];
 
 const authRoutes = [
@@ -49,6 +50,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/settings/:path*",
+    "/tasks/:path*",
     "/login",
     "/register",
     "/forgot-password",
