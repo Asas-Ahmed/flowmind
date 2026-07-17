@@ -155,3 +155,57 @@ export function resendVerificationEmail(email: string) {
     skipRefreshRetry: true,
   });
 }
+
+export type UserProfile = {
+  id: number;
+  full_name: string;
+  email: string;
+  is_email_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+
+  timezone: string;
+  daily_focus_goal_minutes: number;
+  week_starts_on: "monday" | "sunday";
+
+  email_notifications: boolean;
+  task_reminders: boolean;
+  habit_reminders: boolean;
+  weekly_summary: boolean;
+  compact_dashboard: boolean;
+
+  updated_at: string;
+};
+
+export type ProfileUpdatePayload = {
+  full_name: string;
+  timezone: string;
+  daily_focus_goal_minutes: number;
+  week_starts_on: "monday" | "sunday";
+
+  email_notifications: boolean;
+  task_reminders: boolean;
+  habit_reminders: boolean;
+  weekly_summary: boolean;
+  compact_dashboard: boolean;
+};
+
+export type ProfileUpdateResponse = {
+  message: string;
+  profile: UserProfile;
+};
+
+export function getUserProfile() {
+  return apiRequest<UserProfile>("/api/profile", {
+    method: "GET",
+  });
+}
+
+export function updateUserProfile(
+  profile: ProfileUpdatePayload,
+) {
+  return apiRequest<ProfileUpdateResponse>("/api/profile", {
+    method: "PUT",
+    body: JSON.stringify(profile),
+  });
+}

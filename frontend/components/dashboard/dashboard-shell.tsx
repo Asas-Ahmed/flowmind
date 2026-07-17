@@ -38,6 +38,7 @@ const sidebarItems = [
     label: "Dashboard",
     icon: LayoutDashboard,
     active: true,
+    href: "/dashboard",
   },
   {
     label: "Tasks",
@@ -66,6 +67,7 @@ const sidebarItems = [
   {
     label: "Settings",
     icon: Settings,
+    href: "/settings",
   },
 ];
 
@@ -304,6 +306,11 @@ export function DashboardShell() {
                   <button
                     key={item.label}
                     type="button"
+                    onClick={() => {
+                      if (item.href) {
+                        router.push(item.href);
+                      }
+                    }}
                     className={`group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200 ${
                       item.active
                         ? "bg-slate-950 text-white shadow-lg shadow-slate-950/15 dark:bg-white dark:text-slate-950"

@@ -2,12 +2,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.profile import router as profile_router
 from app.database.database import Base, engine
 from app.models.user import User
+from app.models.user_profile import UserProfile
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="FlowMind API", version="1.0.0")
+app = FastAPI(
+    title="FlowMind API",
+    version="1.0.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(profile_router)
 
 
 @app.get("/")
@@ -27,4 +33,7 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "service": "FlowMind API"}
+    return {
+        "status": "ok",
+        "service": "FlowMind API",
+    }
