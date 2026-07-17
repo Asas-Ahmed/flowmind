@@ -59,9 +59,9 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: "Focus",
+    href: "/focus",
     icon: Timer,
     mobile: true,
-    comingSoon: true,
   },
   {
     label: "Schedule",

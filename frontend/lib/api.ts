@@ -13,6 +13,12 @@ import type {
   HabitWorkspace,
 } from "@/types/habit";
 
+import type {
+  FocusSession,
+  FocusSessionPayload,
+  FocusWorkspace,
+} from "@/types/focus";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -302,5 +308,58 @@ export function checkInHabit(
   return apiRequest<HabitCompletion | null>(`/api/habits/${habitId}/check-in`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+
+export function getFocusWorkspace() {
+  return apiRequest<FocusWorkspace>("/api/focus/workspace", { method: "GET" });
+}
+
+export function startFocusSession(payload: FocusSessionPayload) {
+  return apiRequest<FocusSession>("/api/focus/sessions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function pauseFocusSession(sessionId: number, elapsedSeconds: number) {
+  return apiRequest<FocusSession>(`/api/focus/sessions/${sessionId}/pause`, {
+    method: "PUT",
+    body: JSON.stringify({ elapsed_seconds: elapsedSeconds }),
+  });
+}
+
+export function resumeFocusSession(sessionId: number) {
+  return apiRequest<FocusSession>(`/api/focus/sessions/${sessionId}/resume`, {
+    method: "PUT",
+  });
+}
+
+export function completeFocusSession(
+  sessionId: number,
+  elapsedSeconds: number,
+  note: string | null,
+) {
+  return apiRequest<FocusSession>(`/api/focus/sessions/${sessionId}/complete`, {
+    method: "PUT",
+    body: JSON.stringify({ elapsed_seconds: elapsedSeconds, note }),
+  });
+}
+
+export function cancelFocusSession(
+  sessionId: number,
+  elapsedSeconds: number,
+  note: string | null,
+) {
+  return apiRequest<FocusSession>(`/api/focus/sessions/${sessionId}/cancel`, {
+    method: "PUT",
+    body: JSON.stringify({ elapsed_seconds: elapsedSeconds, note }),
+  });
+}
+
+export function deleteFocusSession(sessionId: number) {
+  return apiRequest<void>(`/api/focus/sessions/${sessionId}`, {
+    method: "DELETE",
   });
 }
