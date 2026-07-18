@@ -1,5 +1,11 @@
 import type { DashboardData } from "@/types/dashboard";
 import type {
+  IfThenOutcome,
+  IfThenPlan,
+  IfThenPlanPayload,
+  IfThenWorkspace,
+} from "@/types/if-then";
+import type {
   CognitiveLoadEntry,
   CognitiveLoadEntryPayload,
   CognitiveLoadWorkspace,
@@ -498,4 +504,37 @@ export function deleteCognitiveLoadEntry(entryId: number) {
   return apiRequest<void>(`/api/cognitive-load/entries/${entryId}`, {
     method: "DELETE",
   });
+}
+
+
+export function getIfThenWorkspace() {
+  return apiRequest<IfThenWorkspace>("/api/if-then/workspace", { method: "GET" });
+}
+
+export function createIfThenPlan(payload: IfThenPlanPayload) {
+  return apiRequest<IfThenPlan>("/api/if-then/plans", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateIfThenPlan(
+  planId: number,
+  payload: Partial<IfThenPlanPayload> & { is_active?: boolean },
+) {
+  return apiRequest<IfThenPlan>(`/api/if-then/plans/${planId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function recordIfThenOutcome(planId: number, outcome: IfThenOutcome) {
+  return apiRequest<IfThenPlan>(`/api/if-then/plans/${planId}/outcomes`, {
+    method: "POST",
+    body: JSON.stringify({ outcome }),
+  });
+}
+
+export function deleteIfThenPlan(planId: number) {
+  return apiRequest<void>(`/api/if-then/plans/${planId}`, { method: "DELETE" });
 }
