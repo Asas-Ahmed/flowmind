@@ -21,6 +21,7 @@ import {
   Settings,
   ShieldAlert,
   MoonStar,
+  CupSoda,
   Timer,
   type LucideIcon,
 } from "lucide-react";
@@ -127,6 +128,11 @@ const navigationItems: NavigationItem[] = [
     icon: ShieldAlert,
   },
   {
+    label: "Hydration & Meals",
+    href: "/nourishment",
+    icon: CupSoda,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -182,7 +188,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

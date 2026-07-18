@@ -1,3 +1,4 @@
+import type { NourishmentLog, NourishmentLogPayload, NourishmentWorkspace } from "@/types/nourishment";
 import type { BurnoutWorkspace } from "@/types/burnout";
 import type {
   ExperimentPayload,
@@ -624,4 +625,20 @@ export function deleteProductivityExperiment(experimentId: number) {
 
 export function getBurnoutWorkspace() {
   return apiRequest<BurnoutWorkspace>("/api/burnout/workspace", { method: "GET" });
+}
+
+
+export function getNourishmentWorkspace() {
+  return apiRequest<NourishmentWorkspace>("/api/nourishment/workspace", { method: "GET" });
+}
+
+export function createNourishmentLog(payload: NourishmentLogPayload) {
+  return apiRequest<NourishmentLog>("/api/nourishment/logs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteNourishmentLog(logId: number) {
+  return apiRequest<void>(`/api/nourishment/logs/${logId}`, { method: "DELETE" });
 }

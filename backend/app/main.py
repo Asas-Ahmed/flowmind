@@ -22,6 +22,7 @@ from app.models.if_then_plan import IfThenPlan
 from app.models.distraction_log import DistractionLog
 from app.models.procrastination_starter import ProcrastinationStarter
 from app.models.productivity_experiment import ProductivityExperiment, ProductivityExperimentTrial
+from app.models.nourishment_log import NourishmentLog
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router
@@ -33,6 +34,7 @@ from app.api.distractions import router as distractions_router
 from app.api.procrastination import router as procrastination_router
 from app.api.experiments import router as experiments_router
 from app.api.burnout import router as burnout_router
+from app.api.nourishment import router as nourishment_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -66,6 +68,7 @@ app.include_router(distractions_router)
 app.include_router(procrastination_router)
 app.include_router(experiments_router)
 app.include_router(burnout_router)
+app.include_router(nourishment_router)
 
 @app.get("/")
 def root():
