@@ -78,6 +78,8 @@ import type {
   FocusWorkspace,
 } from "@/types/focus";
 
+import type { PersonalPatternsWorkspace } from "@/types/personal-patterns";
+
 import type {
   ScheduleEvent,
   ScheduleEventPayload,
@@ -788,3 +790,8 @@ export function getGoalsWorkspace() { return apiRequest<GoalsWorkspace>("/api/go
 export function createGoal(payload: GoalPayload) { return apiRequest<Goal>("/api/goals", { method: "POST", body: JSON.stringify(payload) }); }
 export function updateGoal(goalId: number, payload: Partial<GoalPayload & { is_active: boolean }>) { return apiRequest<Goal>(`/api/goals/${goalId}`, { method: "PATCH", body: JSON.stringify(payload) }); }
 export function deleteGoal(goalId: number) { return apiRequest<void>(`/api/goals/${goalId}`, { method: "DELETE" }); }
+
+
+export function getPersonalPatterns(days = 90) {
+  return apiRequest<PersonalPatternsWorkspace>(`/api/personal-patterns/workspace?days=${days}`, { method: "GET" });
+}
