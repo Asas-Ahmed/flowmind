@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   PersonStanding,
   Settings,
+  MoonStar,
   Timer,
   type LucideIcon,
 } from "lucide-react";
@@ -85,6 +86,11 @@ const navigationItems: NavigationItem[] = [
     icon: BatteryCharging,
   },
   {
+    label: "Sleep",
+    href: "/sleep",
+    icon: MoonStar,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -140,7 +146,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

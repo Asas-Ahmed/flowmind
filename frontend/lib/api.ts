@@ -5,6 +5,7 @@ import type {
   EnergyWorkspace,
 } from "@/types/energy";
 import type { ProductivityData } from "@/types/productivity";
+import type { SleepRecord, SleepRecordPayload, SleepWorkspace } from "@/types/sleep";
 import type {
   MovementBreak,
   MovementBreakPayload,
@@ -454,6 +455,24 @@ export function createEnergyCheckIn(payload: EnergyCheckInPayload) {
 
 export function deleteEnergyCheckIn(checkInId: number) {
   return apiRequest<void>(`/api/energy/checkins/${checkInId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export function getSleepWorkspace() {
+  return apiRequest<SleepWorkspace>("/api/sleep/workspace", { method: "GET" });
+}
+
+export function createSleepRecord(payload: SleepRecordPayload) {
+  return apiRequest<SleepRecord>("/api/sleep/records", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteSleepRecord(recordId: number) {
+  return apiRequest<void>(`/api/sleep/records/${recordId}`, {
     method: "DELETE",
   });
 }
