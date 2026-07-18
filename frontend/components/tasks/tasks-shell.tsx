@@ -6,8 +6,8 @@ import { motion } from "framer-motion";
 import {
   Archive,
   BarChart3,
-  Bell,
   BrainCircuit,
+  Bell,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -224,22 +224,7 @@ export function TasksShell() {
     window.localStorage.setItem("flowmind_task_favorites", JSON.stringify(favoriteIds));
   }, [favoriteIds]);
 
-  useEffect(() => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    const timer = window.setInterval(() => {
-      const now = Date.now();
-      tasks.forEach((task) => {
-        if (!task.reminder_enabled || !task.reminder_at || task.status === "completed") return;
-        const reminderTime = new Date(task.reminder_at).getTime();
-        const marker = `flowmind_reminder_${task.id}_${task.reminder_at}`;
-        if (reminderTime <= now && now - reminderTime < 60000 && !sessionStorage.getItem(marker)) {
-          new Notification("FlowMind task reminder", { body: task.title });
-          sessionStorage.setItem(marker, "shown");
-        }
-      });
-    }, 30000);
-    return () => window.clearInterval(timer);
-  }, [tasks]);
+
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -517,15 +502,6 @@ export function TasksShell() {
     }
   };
 
-  const requestNotifications = async () => {
-    if (!("Notification" in window)) {
-      setError("This browser does not support notifications.");
-      return;
-    }
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") setError("Browser notification permission was not granted.");
-  };
-
   return (
     <motion.main 
       initial={{ opacity: 0 }} 
@@ -567,19 +543,7 @@ export function TasksShell() {
                 />
               </label>
             }
-            actions={
-              <button
-                type="button"
-                onClick={() => void requestNotifications()}
-                className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/80 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300"
-                aria-label="Enable browser reminders"
-                title="Browser reminders"
-              >
-                <Bell className="h-5 w-5" />
-
-                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#090c18]" />
-              </button>
-            }
+            actions={null}
           />
 
           <div className="mx-auto max-w-[1560px] space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8 xl:pb-6">

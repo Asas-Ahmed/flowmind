@@ -6,6 +6,7 @@ import { LogOut, Settings } from "lucide-react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationButton } from "@/components/notifications/notification-button";
 import { logoutUser } from "@/lib/api";
 
 type WorkspaceTopbarProps = {
@@ -92,6 +93,8 @@ export function WorkspaceTopbar({
 
         <div className="flex shrink-0 items-center gap-2">
           {actions}
+
+          <NotificationButton className={iconButtonClass} />
 
           <ThemeToggle />
 
