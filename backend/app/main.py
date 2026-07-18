@@ -24,7 +24,7 @@ from app.models.procrastination_starter import ProcrastinationStarter
 from app.models.productivity_experiment import ProductivityExperiment, ProductivityExperimentTrial
 from app.models.nourishment_log import NourishmentLog
 from app.models.recovery_break import RecoveryBreak
-from app.models.time_tracking import TimeEntry, TimeTrackingProject
+from app.models.time_tracking import TimeEntry, TimeTrackingProject, WorkCategory
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router

@@ -6,6 +6,9 @@ from app.database.database import get_db
 from app.models.user import User
 from app.schemas.time_tracking_schema import (
     ManualTimeEntryCreate,
+    WorkCategoryCreate,
+    WorkCategoryResponse,
+    WorkCategoryUpdate,
     TimeEntryResponse,
     TimeEntryUpdate,
     TimeProjectCreate,
@@ -15,12 +18,15 @@ from app.schemas.time_tracking_schema import (
     TimerStartRequest,
 )
 from app.services.time_tracking_service import (
+    create_category,
     create_manual_entry,
     create_project,
+    delete_category,
     delete_entry,
     get_workspace,
     start_timer,
     stop_timer,
+    update_category,
     update_entry,
     update_project,
 )
@@ -31,6 +37,22 @@ router = APIRouter(prefix="/api/time-tracking", tags=["Time Tracking"])
 @router.get("/workspace", response_model=TimeTrackingWorkspaceResponse)
 def workspace(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_workspace(db, current_user)
+
+
+@router.post("/categories", response_model=WorkCategoryResponse, status_code=status.HTTP_201_CREATED)
+def add_category(data: WorkCategoryCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return create_category(db, current_user, data)
+
+
+@router.patch("/categories/{category_id}", response_model=WorkCategoryResponse)
+def edit_category(category_id: int, data: WorkCategoryUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return update_category(db, current_user, category_id, data)
+
+
+@router.delete("/categories/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_category(category_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    delete_category(db, current_user, category_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/projects", response_model=TimeProjectResponse, status_code=status.HTTP_201_CREATED)

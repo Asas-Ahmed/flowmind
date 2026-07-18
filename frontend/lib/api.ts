@@ -9,6 +9,7 @@ import type {
   TimeProject,
   TimeTrackingWorkspace,
   TimerStartPayload,
+  WorkCategory,
 } from "@/types/time-tracking";
 import type { RecoveryBreak, RecoveryBreakPayload, RecoveryWorkspace } from "@/types/recovery";
 import type { NourishmentLog, NourishmentLogPayload, NourishmentWorkspace } from "@/types/nourishment";
@@ -695,7 +696,32 @@ export function getTimeTrackingWorkspace() {
   return apiRequest<TimeTrackingWorkspace>("/api/time-tracking/workspace", { method: "GET" });
 }
 
-export function createTimeProject(payload: { name: string; color: string }) {
+export function createWorkCategory(payload: { name: string; color: string; icon: string; weekly_target_minutes: number | null }) {
+  return apiRequest<WorkCategory>("/api/time-tracking/categories", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateWorkCategory(categoryId: number, payload: Partial<{ name: string; color: string; icon: string; weekly_target_minutes: number | null; is_archived: boolean }>) {
+  return apiRequest<WorkCategory>(`/api/time-tracking/categories/${categoryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteWorkCategory(categoryId: number) {
+  return apiRequest<void>(`/api/time-tracking/categories/${categoryId}`, { method: "DELETE" });
+}
+
+export function updateTimeProject(projectId: number, payload: Partial<{ name: string; color: string; category_id: number | null; is_archived: boolean }>) {
+  return apiRequest<TimeProject>(`/api/time-tracking/projects/${projectId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createTimeProject(payload: { name: string; color: string; category_id?: number | null }) {
   return apiRequest<TimeProject>("/api/time-tracking/projects", {
     method: "POST",
     body: JSON.stringify(payload),

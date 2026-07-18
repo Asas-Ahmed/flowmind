@@ -4,24 +4,55 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class WorkCategoryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    color: str = Field(default="#4f46e5", min_length=4, max_length=20)
+    icon: str = Field(default="briefcase", min_length=1, max_length=40)
+    weekly_target_minutes: int | None = Field(default=None, ge=30, le=10080)
+
+
+class WorkCategoryUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    color: str | None = Field(default=None, min_length=4, max_length=20)
+    icon: str | None = Field(default=None, min_length=1, max_length=40)
+    weekly_target_minutes: int | None = Field(default=None, ge=30, le=10080)
+    is_archived: bool | None = None
+
+
+class WorkCategoryResponse(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    color: str
+    icon: str
+    weekly_target_minutes: int | None
+    is_archived: bool
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TimeProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     color: str = Field(default="#4f46e5", min_length=4, max_length=20)
+    category_id: int | None = None
 
 
 class TimeProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     color: str | None = Field(default=None, min_length=4, max_length=20)
+    category_id: int | None = None
     is_archived: bool | None = None
 
 
 class TimeProjectResponse(BaseModel):
     id: int
     user_id: int
+    category_id: int | None
     name: str
     color: str
     is_archived: bool
     created_at: datetime
+    category: WorkCategoryResponse | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -84,6 +115,8 @@ class TimeBreakdownItem(BaseModel):
     seconds: int
     percentage: float
     color: str | None = None
+    category_id: int | None = None
+    target_seconds: int | None = None
 
 
 class DailyTimeTotal(BaseModel):
@@ -106,6 +139,8 @@ class TimeTrackingWorkspaceResponse(BaseModel):
     average_daily_seconds: int
     entries_this_week: int
     projects: list[TimeProjectResponse]
+    categories: list[WorkCategoryResponse]
+    category_breakdown: list[TimeBreakdownItem]
     project_breakdown: list[TimeBreakdownItem]
     tag_breakdown: list[TimeBreakdownItem]
     daily_totals: list[DailyTimeTotal]

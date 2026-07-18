@@ -2,20 +2,25 @@ from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
-from app.models.time_tracking import TimeEntry, TimeTrackingProject
+from app.models.time_tracking import TimeEntry, TimeTrackingProject, WorkCategory
 from app.models.user import User
 from app.repositories.time_tracking_repo import (
     get_active_entry,
+    get_category,
     get_entry,
     get_project,
     list_entries,
     list_entries_since,
+    list_categories,
     list_projects,
 )
 from app.schemas.time_tracking_schema import (
     ManualTimeEntryCreate,
+    WorkCategoryCreate,
+    WorkCategoryUpdate,
     TimeEntryUpdate,
     TimeProjectCreate,
     TimeProjectUpdate,
@@ -52,12 +57,76 @@ def _require_project(db: Session, user: User, project_id: int | None) -> TimeTra
     return project
 
 
+def _require_category(db: Session, user: User, category_id: int | None) -> WorkCategory | None:
+    if category_id is None:
+        return None
+    category = get_category(db, user.id, category_id)
+    if category is None or category.is_archived:
+        raise HTTPException(status_code=404, detail="Work category not found")
+    return category
+
+
+def create_category(db: Session, user: User, data: WorkCategoryCreate) -> WorkCategory:
+    name = data.name.strip()
+    duplicate = next((c for c in list_categories(db, user.id) if c.name.lower() == name.lower()), None)
+    if duplicate:
+        raise HTTPException(status_code=409, detail="A work category with this name already exists")
+    category = WorkCategory(
+        user_id=user.id,
+        name=name,
+        color=data.color,
+        icon=data.icon,
+        weekly_target_minutes=data.weekly_target_minutes,
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+def update_category(db: Session, user: User, category_id: int, data: WorkCategoryUpdate) -> WorkCategory:
+    category = get_category(db, user.id, category_id)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Work category not found")
+    values = data.model_dump(exclude_unset=True)
+    if "name" in values:
+        name = values["name"].strip()
+        duplicate = next((c for c in list_categories(db, user.id) if c.id != category.id and c.name.lower() == name.lower()), None)
+        if duplicate:
+            raise HTTPException(status_code=409, detail="A work category with this name already exists")
+        category.name = name
+    for field in ("color", "icon", "weekly_target_minutes", "is_archived"):
+        if field in values:
+            setattr(category, field, values[field])
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+def delete_category(db: Session, user: User, category_id: int) -> None:
+    category = get_category(db, user.id, category_id)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Work category not found")
+
+    db.execute(
+        update(TimeTrackingProject)
+        .where(
+            TimeTrackingProject.user_id == user.id,
+            TimeTrackingProject.category_id == category.id,
+        )
+        .values(category_id=None)
+    )
+    db.delete(category)
+    db.commit()
+
+
 def create_project(db: Session, user: User, data: TimeProjectCreate) -> TimeTrackingProject:
     name = data.name.strip()
     duplicate = next((p for p in list_projects(db, user.id) if p.name.lower() == name.lower()), None)
     if duplicate:
         raise HTTPException(status_code=409, detail="A project with this name already exists")
-    project = TimeTrackingProject(user_id=user.id, name=name, color=data.color)
+    _require_category(db, user, data.category_id)
+    project = TimeTrackingProject(user_id=user.id, name=name, color=data.color, category_id=data.category_id)
     db.add(project)
     db.commit()
     db.refresh(project)
@@ -68,6 +137,9 @@ def update_project(db: Session, user: User, project_id: int, data: TimeProjectUp
     project = get_project(db, user.id, project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="Time-tracking project not found")
+    if "category_id" in data.model_fields_set:
+        _require_category(db, user, data.category_id)
+        project.category_id = data.category_id
     if data.name is not None:
         project.name = data.name.strip()
     if data.color is not None:
@@ -181,7 +253,20 @@ def _entry_seconds(entry: TimeEntry, now: datetime) -> int:
     return entry.duration_seconds
 
 
-def _serialize_entry(entry: TimeEntry, projects: dict[int, TimeTrackingProject]) -> dict:
+def _serialize_project(project: TimeTrackingProject, categories: dict[int, WorkCategory]) -> dict:
+    return {
+        "id": project.id,
+        "user_id": project.user_id,
+        "category_id": project.category_id,
+        "name": project.name,
+        "color": project.color,
+        "is_archived": project.is_archived,
+        "created_at": project.created_at,
+        "category": categories.get(project.category_id) if project.category_id else None,
+    }
+
+
+def _serialize_entry(entry: TimeEntry, projects: dict[int, TimeTrackingProject], categories: dict[int, WorkCategory]) -> dict:
     return {
         "id": entry.id,
         "user_id": entry.user_id,
@@ -196,7 +281,7 @@ def _serialize_entry(entry: TimeEntry, projects: dict[int, TimeTrackingProject])
         "note": entry.note,
         "created_at": entry.created_at,
         "updated_at": entry.updated_at,
-        "project": projects.get(entry.project_id) if entry.project_id else None,
+        "project": _serialize_project(projects[entry.project_id], categories) if entry.project_id in projects else None,
     }
 
 
@@ -204,6 +289,8 @@ def get_workspace(db: Session, user: User) -> dict:
     now = datetime.now(timezone.utc)
     today_start = datetime.combine(now.date(), time.min, tzinfo=timezone.utc)
     week_start = today_start - timedelta(days=today_start.weekday())
+    categories = list_categories(db, user.id)
+    category_map = {category.id: category for category in categories}
     projects = list_projects(db, user.id)
     project_map = {project.id: project for project in projects}
     entries = list_entries(db, user.id)
@@ -214,6 +301,10 @@ def get_workspace(db: Session, user: User) -> dict:
     week_seconds = sum(_entry_seconds(e, now) for e in weekly_entries)
     billable_seconds = sum(_entry_seconds(e, now) for e in weekly_entries if e.is_billable)
 
+    category_seconds: dict[str, int] = defaultdict(int)
+    category_colors: dict[str, str | None] = {}
+    category_ids: dict[str, int | None] = {}
+    category_targets: dict[str, int | None] = {}
     project_seconds: dict[str, int] = defaultdict(int)
     project_colors: dict[str, str | None] = {}
     tag_seconds: Counter[str] = Counter()
@@ -225,6 +316,12 @@ def get_workspace(db: Session, user: User) -> dict:
     for entry in weekly_entries:
         seconds = _entry_seconds(entry, now)
         project = project_map.get(entry.project_id) if entry.project_id else None
+        category = category_map.get(project.category_id) if project and project.category_id else None
+        category_label = category.name if category else "Uncategorized"
+        category_seconds[category_label] += seconds
+        category_colors[category_label] = category.color if category else "#94a3b8"
+        category_ids[category_label] = category.id if category else None
+        category_targets[category_label] = category.weekly_target_minutes * 60 if category and category.weekly_target_minutes else None
         label = project.name if project else "Unassigned"
         project_seconds[label] += seconds
         project_colors[label] = project.color if project else "#94a3b8"
@@ -234,7 +331,7 @@ def get_workspace(db: Session, user: User) -> dict:
         if key in daily:
             daily[key] += seconds
 
-    def breakdown(source: dict[str, int], colors: dict[str, str | None] | None = None) -> list[dict]:
+    def breakdown(source: dict[str, int], colors: dict[str, str | None] | None = None, ids: dict[str, int | None] | None = None, targets: dict[str, int | None] | None = None) -> list[dict]:
         total = sum(source.values())
         return [
             {
@@ -242,6 +339,8 @@ def get_workspace(db: Session, user: User) -> dict:
                 "seconds": seconds,
                 "percentage": round(seconds / total * 100, 1) if total else 0.0,
                 "color": colors.get(label) if colors else None,
+                "category_id": ids.get(label) if ids else None,
+                "target_seconds": targets.get(label) if targets else None,
             }
             for label, seconds in sorted(source.items(), key=lambda item: item[1], reverse=True)
         ]
@@ -280,16 +379,18 @@ def get_workspace(db: Session, user: User) -> dict:
         }
 
     return {
-        "active_entry": _serialize_entry(active, project_map) if active else None,
+        "active_entry": _serialize_entry(active, project_map, category_map) if active else None,
         "today_seconds": today_seconds,
         "week_seconds": week_seconds,
         "billable_week_seconds": billable_seconds,
         "average_daily_seconds": round(week_seconds / max(1, active_days)),
         "entries_this_week": len(weekly_entries),
-        "projects": projects,
+        "projects": [_serialize_project(project, category_map) for project in projects],
+        "categories": categories,
+        "category_breakdown": breakdown(category_seconds, category_colors, category_ids, category_targets),
         "project_breakdown": breakdown(project_seconds, project_colors),
         "tag_breakdown": breakdown(dict(tag_seconds)),
         "daily_totals": [{"date": date, "seconds": seconds} for date, seconds in daily.items()],
         "insight": insight,
-        "entries": [_serialize_entry(entry, project_map) for entry in entries],
+        "entries": [_serialize_entry(entry, project_map, category_map) for entry in entries],
     }
