@@ -39,6 +39,7 @@ from app.api.burnout import router as burnout_router
 from app.api.nourishment import router as nourishment_router
 from app.api.recovery import router as recovery_router
 from app.api.time_tracking import router as time_tracking_router
+from app.api.activity import router as activity_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -75,6 +76,7 @@ app.include_router(burnout_router)
 app.include_router(nourishment_router)
 app.include_router(recovery_router)
 app.include_router(time_tracking_router)
+app.include_router(activity_router)
 
 @app.get("/")
 def root():

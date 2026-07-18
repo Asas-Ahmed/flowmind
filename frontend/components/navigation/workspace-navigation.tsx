@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import {
+  Activity,
   BarChart3,
   BatteryCharging,
   Gauge,
@@ -78,6 +79,11 @@ const navigationItems: NavigationItem[] = [
     href: "/focus",
     icon: Timer,
     mobile: true,
+  },
+  {
+    label: "Activity Timeline",
+    href: "/activity",
+    icon: Activity,
   },
   {
     label: "Time Tracking",
@@ -200,7 +206,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Time Tracking", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Activity Timeline", "Time Tracking", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

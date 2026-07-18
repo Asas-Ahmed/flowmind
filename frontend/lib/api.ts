@@ -1,3 +1,4 @@
+import type { ActivityTimeline } from "@/types/activity";
 import type {
   ManualTimeEntryPayload,
   TimeEntry,
@@ -725,4 +726,9 @@ export function updateTimeEntry(entryId: number, payload: TimeEntryUpdatePayload
 
 export function deleteTimeEntry(entryId: number) {
   return apiRequest<void>(`/api/time-tracking/entries/${entryId}`, { method: "DELETE" });
+}
+
+
+export function getActivityTimeline(days = 30) {
+  return apiRequest<ActivityTimeline>(`/api/activity/timeline?days=${days}&limit=300`, { method: "GET" });
 }
