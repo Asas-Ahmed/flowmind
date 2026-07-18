@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
 import {
   cancelFocusSession,
@@ -293,17 +294,20 @@ export function FocusShell() {
           }} 
         className="min-h-screen xl:pl-[272px]"
       >
-        <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[#f5f7fb]/90 px-4 py-4 backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#050711]/85 sm:px-6 xl:px-8">
-          <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">Focus workspace</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Protect your attention.</h1>
+        <WorkspaceTopbar
+          eyebrow="Focus workspace"
+          title="Protect your attention."
+          description="Use structured focus sessions and understand your deep-work patterns."
+          maxWidth="max-w-[1500px]"
+          actions={
+            <div className="hidden h-11 items-center rounded-2xl border border-slate-200/80 bg-white/80 px-4 text-sm text-slate-500 shadow-sm dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300 sm:flex">
+              Today:
+              <span className="ml-1.5 font-black text-slate-950 dark:text-white">
+                {formatMinutes(workspace?.today_minutes ?? 0)}
+              </span>
             </div>
-            <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300 sm:block">
-              Today: <span className="font-bold text-slate-950 dark:text-white">{formatMinutes(workspace?.today_minutes ?? 0)}</span>
-            </div>
-          </div>
-        </header>
+          }
+        />
 
         <div className="mx-auto max-w-[1500px] space-y-6 px-4 pb-28 pt-6 sm:px-6 xl:px-8 xl:pb-10">
           {error && (

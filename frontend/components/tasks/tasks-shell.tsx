@@ -1,10 +1,8 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
-import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
+
 import {
   Archive,
   BarChart3,
@@ -28,7 +26,6 @@ import {
   Pencil,
   Plus,
   Search,
-  Settings,
   Star,
   Tag,
   Trash2,
@@ -36,8 +33,9 @@ import {
   X,
 } from "lucide-react";
 
-import { FlowMindLogo } from "@/components/brand/flowmind-logo";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
+import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import {
   createTask,
   createTaskCategory,
@@ -159,7 +157,6 @@ function downloadJson(filename: string, value: unknown) {
 }
 
 export function TasksShell() {
-  const router = useRouter();
   const importRef = useRef<HTMLInputElement>(null);
   const favoritesLoadedRef = useRef(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -554,27 +551,36 @@ export function TasksShell() {
         <div className="relative min-h-screen xl:pl-[272px]">
 
         <section className="min-w-0">
-          <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-[#f5f7fb]/80 backdrop-blur-2xl dark:border-white/10 dark:bg-[#050713]/80">
-            <div className="flex h-[76px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-              <button onClick={() => router.push("/dashboard")} className="xl:hidden"><FlowMindLogo size="sm" variant="mark" href="" /></button>
-              <div className="hidden min-w-0 md:block"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Task workspace</p><h1 className="truncate text-lg font-bold">Plan clearly. Finish calmly.</h1></div>
-              <label className="mx-auto flex max-w-xl flex-1 items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 shadow-sm dark:border-white/10 dark:bg-white/5"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, notes or tags..." className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" /></label>
+          <WorkspaceTopbar
+            eyebrow="Task workspace"
+            title="Organize what matters."
+            description="Plan, prioritize, schedule, and complete your work."
+            centerContent={
+              <label className="flex w-full items-center gap-3 rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2.5 shadow-sm transition focus-within:border-indigo-300 focus-within:ring-4 focus-within:ring-indigo-500/10 dark:border-white/10 dark:bg-white/[0.055] dark:focus-within:border-indigo-400/40">
+                <Search className="h-4 w-4 shrink-0 text-slate-400" />
+
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search tasks, notes or tags..."
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                />
+              </label>
+            }
+            actions={
               <button
-                onClick={() => setOrganizerOpen((value) => !value)}
-                className={`hidden h-11 items-center gap-2 rounded-2xl border px-3.5 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-md sm:flex ${
-                  organizerOpen
-                    ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-400/30 dark:bg-indigo-400/10 dark:text-indigo-200"
-                    : "border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
-                }`}
+                type="button"
+                onClick={() => void requestNotifications()}
+                className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/80 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300"
+                aria-label="Enable browser reminders"
+                title="Browser reminders"
               >
-                <FolderPlus className="h-4 w-4" />
-                Organize
+                <Bell className="h-5 w-5" />
+
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#090c18]" />
               </button>
-              <button onClick={() => void requestNotifications()} className="relative grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300" title="Enable browser reminders"><Bell className="h-5 w-5" /><span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-cyan-400 ring-2 ring-white dark:ring-[#0a0d1c]" /></button>
-              <ThemeToggle />
-              <button onClick={() => router.push("/settings")} className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5 dark:text-slate-300"><Settings className="h-5 w-5" /></button>
-            </div>
-          </header>
+            }
+          />
 
           <div className="mx-auto max-w-[1560px] space-y-6 px-4 py-6 pb-28 sm:px-6 lg:px-8 xl:pb-6">
             <section className="relative overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045] sm:p-7">

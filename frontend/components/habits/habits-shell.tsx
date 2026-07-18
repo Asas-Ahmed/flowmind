@@ -1,11 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlarmClock,
-  ArrowLeft,
   Brain,
   CalendarDays,
   Check,
@@ -27,9 +25,9 @@ import {
 } from "lucide-react";
 
 import { SpinnerLoader } from "@/components/common/spinner-loader";
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import {
   checkInHabit,
   createHabit,
@@ -94,7 +92,6 @@ function frequencyLabel(habit: Habit) {
 }
 
 export function HabitsShell() {
-  const router = useRouter();
   const [workspace, setWorkspace] = useState<HabitWorkspace | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [search, setSearch] = useState("");
@@ -280,31 +277,21 @@ export function HabitsShell() {
         }
       />
 
-      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-[#f6f7fb]/82 shadow-sm shadow-slate-900/[0.025] backdrop-blur-2xl dark:border-white/10 dark:bg-[#050712]/82 dark:shadow-black/10 xl:pl-[272px]">
-        <div className="mx-auto flex max-w-[1800px] items-center gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard")}
-            className="hidden rounded-2xl border border-slate-200/80 bg-white/80 p-2.5 shadow-sm transition hover:-translate-x-0.5 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 sm:block"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-indigo-600 dark:text-cyan-300">FlowMind · Habit workspace</p>
-            <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">Build consistency that lasts</h1>
-          </div>
-          <ThemeToggle />
+      <WorkspaceTopbar
+        eyebrow="Habit workspace"
+        title="Build consistency that lasts."
+        description="Track routines, protect streaks, and review your progress."
+        actions={
           <button
             type="button"
             onClick={openCreateForm}
-            className="flex items-center gap-2 rounded-2xl aurora-gradient px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/25 active:translate-y-0"
+            className="flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:shadow-xl"
           >
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">New habit</span>
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="relative xl:pl-[272px]">
         <div className="mx-auto max-w-[1800px] px-4 pb-32 pt-6 sm:px-6 lg:px-8 lg:pb-8">

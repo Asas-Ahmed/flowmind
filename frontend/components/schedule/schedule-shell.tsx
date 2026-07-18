@@ -2,7 +2,6 @@
 
 import {
   BellRing,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   CircleAlert,
@@ -18,6 +17,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import {
   createScheduleEvent,
   deleteScheduleEvent,
@@ -237,20 +237,35 @@ export function ScheduleShell() {
           }} 
         className="pb-28 xl:ml-[268px] xl:pb-8"
       >
-        <div className="mx-auto max-w-[1580px] px-4 py-5 sm:px-6 lg:px-8">
-          <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 dark:border-white/[0.08] sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
-                <CalendarDays className="h-4 w-4" /> Smart schedule
-              </div>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight">Plan your time, not just your tasks.</h1>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Tasks, habits, focus sessions, reminders, and personal events in one timeline.</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => void loadWorkspace()} className="rounded-xl border border-slate-200 p-3 text-slate-500 hover:bg-white dark:border-white/10 dark:hover:bg-white/[0.05]" aria-label="Refresh schedule"><RefreshCw className="h-4 w-4" /></button>
-              <button onClick={() => openCreate()} className="flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white shadow-lg dark:bg-white dark:text-slate-950"><Plus className="h-4 w-4" /> Add event</button>
-            </div>
-          </header>
+        <div className="mx-auto max-w-[1580px] px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+          <WorkspaceTopbar
+            eyebrow="Smart schedule"
+            title="Plan your time, not just your tasks."
+            description="Tasks, habits, focus sessions, reminders, and events in one timeline."
+            maxWidth="max-w-[1580px]"
+            actions={
+              <>
+                <button
+                  type="button"
+                  onClick={() => void loadWorkspace()}
+                  className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/80 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300"
+                  aria-label="Refresh schedule"
+                  title="Refresh schedule"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openCreate()}
+                  className="flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add event</span>
+                </button>
+              </>
+            }
+          />
 
           {error && <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300">{error}</div>}
 

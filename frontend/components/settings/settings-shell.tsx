@@ -11,7 +11,6 @@ import {
   Clock3,
   LayoutDashboard,
   LoaderCircle,
-  LogOut,
   Mail,
   MonitorCog,
   Save,
@@ -22,12 +21,10 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 import { SpinnerLoader } from "@/components/common/spinner-loader";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import {
   getUserProfile,
-  logoutUser,
   ProfileUpdatePayload,
   updateUserProfile,
   UserProfile,
@@ -263,23 +260,6 @@ export function SettingsShell() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await logoutUser();
-    } finally {
-      document.cookie =
-        "flowmind_access_token=; path=/; max-age=0; SameSite=Lax";
-
-      document.cookie =
-        "flowmind_refresh_token=; path=/; max-age=0; SameSite=Lax";
-
-      sessionStorage.removeItem("flowmind-dashboard-loader-seen");
-
-      router.replace("/login");
-      router.refresh();
-    }
-  }
-
   if (isLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background">
@@ -296,30 +276,14 @@ export function SettingsShell() {
 
       <div className="pointer-events-none fixed right-0 top-40 h-96 w-96 rounded-full bg-fuchsia-500/15 blur-3xl dark:bg-fuchsia-500/10" />
 
-      <header className="sticky top-0 z-40 border-b border-slate-200/75 bg-slate-50/88 px-4 py-3 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#050816]/88 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <FlowMindLogo
-            variant="full"
-            size="sm"
-            href=""
-            showSubtitle={false}
-          />
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 text-sm font-medium text-slate-600 shadow-sm transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-rose-400/20 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"
-            >
-              <LogOut className="h-4 w-4" />
-
-              <span className="hidden sm:inline">Logout</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <WorkspaceTopbar
+        eyebrow="Account and preferences"
+        title="Settings"
+        description="Manage your profile, productivity preferences, notifications, and workspace experience."
+        maxWidth="max-w-7xl"
+        showSettings={false}
+        showMobileLogo={true}
+      />
 
       <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         <button

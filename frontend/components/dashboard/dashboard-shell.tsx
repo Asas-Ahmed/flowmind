@@ -13,19 +13,17 @@ import {
   Flame,
   Focus,
   ListTodo,
-  LogOut,
   RefreshCw,
   Sparkles,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 
+import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import { DashboardLoader } from "./dashboard-loader";
-import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { getDashboardData, logoutUser } from "@/lib/api";
+import { getDashboardData } from "@/lib/api";
 import type { DashboardData } from "@/types/dashboard";
 
 const LOADER_KEY = "flowmind-dashboard-loader-seen";
@@ -85,14 +83,6 @@ export function DashboardShell() {
     ];
   }, [data]);
 
-  const handleLogout = async () => {
-    try { await logoutUser(); } finally {
-      sessionStorage.removeItem(LOADER_KEY);
-      router.replace("/login");
-      router.refresh();
-    }
-  };
-
   return (
     <>
       <AnimatePresence mode="wait">{showLoader && <DashboardLoader onFinish={() => setShowLoader(false)} />}</AnimatePresence>
@@ -102,17 +92,26 @@ export function DashboardShell() {
         <WorkspaceSidebar taskCount={data?.tasks_due_today ?? 0} habitCount={data?.habits_due_today ?? 0} insightTitle="Live Dashboard" insightText="Real activity from tasks, habits, focus sessions, and schedules." />
 
         <div className="relative min-h-screen xl:pl-[272px]">
-          <header className="sticky top-0 z-40 border-b border-slate-200/75 bg-slate-50/88 px-4 py-3 backdrop-blur-2xl dark:border-slate-800/80 dark:bg-[#050816]/88 sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-[1800px] items-center justify-between gap-3">
-              <div className="xl:hidden"><FlowMindLogo variant="full" size="sm" href="" showSubtitle={false} /></div>
-              <div className="hidden xl:block"><p className="text-sm text-slate-500 dark:text-slate-400">Welcome back, {data?.user_name?.split(" ")[0] ?? "there"} 👋</p><h1 className="text-2xl font-bold">Your live productivity overview</h1></div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => void loadDashboard()} aria-label="Refresh dashboard" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white/80 dark:border-slate-800 dark:bg-slate-900/70"><RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /></button>
-                <ThemeToggle />
-                <button onClick={handleLogout} className="flex h-11 items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 dark:border-slate-800 dark:bg-slate-900/70"><LogOut className="h-4 w-4" /><span className="hidden sm:inline">Logout</span></button>
-              </div>
-            </div>
-          </header>
+          <WorkspaceTopbar
+            eyebrow={`Welcome back, ${
+              data?.user_name?.split(" ")[0] ?? "there"
+            } 👋`}
+            title="Your live productivity overview"
+            description="Tasks, habits, focus sessions, schedules, and insights in one place."
+            actions={
+              <button
+                type="button"
+                onClick={() => void loadDashboard()}
+                aria-label="Refresh dashboard"
+                title="Refresh dashboard"
+                className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200/80 bg-white/80 text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/[0.055] dark:text-slate-300"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+              </button>
+            }
+          />
 
           <div className="mx-auto grid max-w-[1800px] gap-6 px-4 pb-32 pt-6 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="min-w-0 space-y-6">
