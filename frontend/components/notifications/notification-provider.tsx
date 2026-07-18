@@ -1,17 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { usePathname } from "next/navigation";
 
 import { getScheduleWorkspace, getUserProfile } from "@/lib/api";
 import type { UserProfile } from "@/lib/api";
 import type { ScheduleItem } from "@/types/schedule";
 
-const CHECK_INTERVAL_MS = 15_000;
-const REFRESH_INTERVAL_MS = 5 * 60_000;
-const REMINDER_GRACE_MS = 10 * 60_000;
+const CHECK_INTERVAL_MS = 10_000;
+const REFRESH_INTERVAL_MS = 30_000;
+const REMINDER_GRACE_MS = 15 * 60_000;
+const UPCOMING_WINDOW_MS = 7 * 24 * 60 * 60_000;
 const SEEN_STORAGE_KEY = "flowmind_seen_notifications";
-const NOTIFICATION_CHANGE_EVENT = "flowmind:notification-permission-change";
+const BROADCAST_CHANNEL_NAME = "flowmind-notifications";
+
+export const NOTIFICATION_CHANGE_EVENT = "flowmind:notification-permission-change";
+export const NOTIFICATION_DATA_CHANGE_EVENT = "flowmind:notification-data-change";
 
 const PUBLIC_ROUTES = new Set([
   "/",
@@ -23,6 +36,19 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 type SeenNotifications = Record<string, number>;
+
+type NotificationContextValue = {
+  reminders: ScheduleItem[];
+  unreadCount: number;
+  loading: boolean;
+  lastUpdatedAt: number | null;
+  currentTime: number | null;
+  refresh: () => Promise<void>;
+  markSeen: (item: ScheduleItem) => void;
+  markAllSeen: () => void;
+};
+
+const NotificationContext = createContext<NotificationContextValue | null>(null);
 
 function dateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -37,20 +63,17 @@ function loadSeenNotifications(): SeenNotifications {
     const raw = window.localStorage.getItem(SEEN_STORAGE_KEY);
     if (!raw) return {};
 
-    const parsed = JSON.parse(raw) as unknown;
+    const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
 
-    const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    return Object.entries(parsed as Record<string, unknown>).reduce<SeenNotifications>(
-      (seen, [key, value]) => {
-        if (typeof value === "number" && value >= cutoff) {
-          seen[key] = value;
-        }
+    const cutoff = Date.now() - 14 * 24 * 60 * 60_000;
+    const seen: SeenNotifications = {};
 
-        return seen;
-      },
-      {},
-    );
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === "number" && value >= cutoff) seen[key] = value;
+    }
+
+    return seen;
   } catch {
     return {};
   }
@@ -70,31 +93,45 @@ function notificationCopy(item: ScheduleItem) {
   if (item.source === "task") {
     return { title: "FlowMind task reminder", body: item.title };
   }
-
   if (item.source === "habit") {
     return { title: "FlowMind habit reminder", body: `Time for ${item.title}.` };
   }
-
   if (item.source === "focus") {
     return { title: "FlowMind focus reminder", body: item.title };
   }
-
   return {
     title: "FlowMind schedule reminder",
     body: item.location ? `${item.title} · ${item.location}` : item.title,
   };
 }
 
-export function NotificationProvider() {
+function destinationFor(item: ScheduleItem) {
+  if (item.source === "task") return "/tasks";
+  if (item.source === "habit") return "/habits";
+  if (item.source === "focus") return "/focus";
+  return "/schedule";
+}
+
+export function NotificationProvider({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
   const profileRef = useRef<UserProfile | null>(null);
   const itemsRef = useRef<ScheduleItem[]>([]);
   const seenRef = useRef<SeenNotifications>({});
+  const refreshingRef = useRef(false);
+
+  const [reminders, setReminders] = useState<ScheduleItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
+  const [seenNotifications, setSeenNotifications] = useState<SeenNotifications>({});
 
   const active = Boolean(pathname && !PUBLIC_ROUTES.has(pathname));
 
   const refreshReminders = useCallback(async () => {
-    if (!active) return;
+    if (!active || refreshingRef.current) return;
+
+    refreshingRef.current = true;
+    setLoading(true);
 
     const now = new Date();
     const rangeStart = new Date(now);
@@ -108,34 +145,100 @@ export function NotificationProvider() {
         getScheduleWorkspace(dateKey(rangeStart), dateKey(rangeEnd)),
       ]);
 
+      const nowMs = Date.now();
+      const visibleItems = workspace.items
+        .filter((item) => item.reminder_at)
+        .filter((item) => preferenceAllows(item, profile))
+        .filter((item) => !(item.source === "task" && item.status === "completed"))
+        .filter((item) => {
+          const reminderMs = new Date(item.reminder_at as string).getTime();
+          return Number.isFinite(reminderMs) && reminderMs >= nowMs - REMINDER_GRACE_MS && reminderMs <= nowMs + UPCOMING_WINDOW_MS;
+        })
+        .sort((a, b) => new Date(a.reminder_at as string).getTime() - new Date(b.reminder_at as string).getTime());
+
       profileRef.current = profile;
-      itemsRef.current = workspace.items.filter((item) => item.reminder_at);
+      itemsRef.current = visibleItems;
+      setReminders(visibleItems);
+      setLastUpdatedAt(nowMs);
     } catch {
       profileRef.current = null;
       itemsRef.current = [];
+      setReminders([]);
+    } finally {
+      refreshingRef.current = false;
+      setLoading(false);
     }
   }, [active]);
+
+  const markSeen = useCallback((item: ScheduleItem) => {
+    const next = { ...seenRef.current, [reminderMarker(item)]: Date.now() };
+    seenRef.current = next;
+    saveSeenNotifications(next);
+    setSeenNotifications(next);
+  }, []);
+
+  const markAllSeen = useCallback(() => {
+    const now = Date.now();
+    for (const item of itemsRef.current) seenRef.current[reminderMarker(item)] = now;
+    const next = { ...seenRef.current };
+    seenRef.current = next;
+    saveSeenNotifications(next);
+    setSeenNotifications(next);
+  }, []);
 
   useEffect(() => {
     if (!active || typeof window === "undefined") return;
 
-    seenRef.current = loadSeenNotifications();
-    saveSeenNotifications(seenRef.current);
-    void refreshReminders();
-
-    const refreshTimer = window.setInterval(() => {
+    const initialize = window.setTimeout(() => {
+      const seen = loadSeenNotifications();
+      seenRef.current = seen;
+      saveSeenNotifications(seen);
+      setSeenNotifications(seen);
+      setCurrentTime(Date.now());
       void refreshReminders();
-    }, REFRESH_INTERVAL_MS);
+    }, 0);
 
-    const handlePermissionChange = () => {
-      void refreshReminders();
+    const channel = "BroadcastChannel" in window
+      ? new BroadcastChannel(BROADCAST_CHANNEL_NAME)
+      : null;
+
+    const requestRefresh = () => void refreshReminders();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") requestRefresh();
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === SEEN_STORAGE_KEY) {
+        const seen = loadSeenNotifications();
+        seenRef.current = seen;
+        setSeenNotifications(seen);
+      }
+    };
+    const handleDataChange = () => {
+      channel?.postMessage("refresh");
+      requestRefresh();
     };
 
-    window.addEventListener(NOTIFICATION_CHANGE_EVENT, handlePermissionChange);
+    channel?.addEventListener("message", requestRefresh);
+    window.addEventListener(NOTIFICATION_CHANGE_EVENT, requestRefresh);
+    window.addEventListener(NOTIFICATION_DATA_CHANGE_EVENT, handleDataChange);
+    window.addEventListener("focus", requestRefresh);
+    window.addEventListener("online", requestRefresh);
+    window.addEventListener("storage", handleStorage);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const refreshTimer = window.setInterval(requestRefresh, REFRESH_INTERVAL_MS);
 
     return () => {
+      window.clearTimeout(initialize);
       window.clearInterval(refreshTimer);
-      window.removeEventListener(NOTIFICATION_CHANGE_EVENT, handlePermissionChange);
+      channel?.removeEventListener("message", requestRefresh);
+      channel?.close();
+      window.removeEventListener(NOTIFICATION_CHANGE_EVENT, requestRefresh);
+      window.removeEventListener(NOTIFICATION_DATA_CHANGE_EVENT, handleDataChange);
+      window.removeEventListener("focus", requestRefresh);
+      window.removeEventListener("online", requestRefresh);
+      window.removeEventListener("storage", handleStorage);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [active, refreshReminders]);
 
@@ -163,12 +266,14 @@ export function NotificationProvider() {
         const notification = new Notification(copy.title, {
           body: copy.body,
           icon: "/favicon.ico",
+          badge: "/favicon.ico",
           tag: marker,
+          requireInteraction: item.source === "task",
         });
 
         notification.onclick = () => {
           window.focus();
-          window.location.assign(item.source === "task" ? "/tasks" : item.source === "habit" ? "/habits" : "/schedule");
+          window.location.assign(destinationFor(item));
           notification.close();
         };
 
@@ -176,15 +281,62 @@ export function NotificationProvider() {
         changed = true;
       }
 
-      if (changed) saveSeenNotifications(seenRef.current);
+      if (changed) {
+        const next = { ...seenRef.current };
+        seenRef.current = next;
+        saveSeenNotifications(next);
+        setSeenNotifications(next);
+      }
     };
 
-    checkDueReminders();
-    const timer = window.setInterval(checkDueReminders, CHECK_INTERVAL_MS);
-    return () => window.clearInterval(timer);
+    const initialCheck = window.setTimeout(checkDueReminders, 0);
+    const timer = window.setInterval(() => {
+      setCurrentTime(Date.now());
+      checkDueReminders();
+    }, CHECK_INTERVAL_MS);
+    return () => {
+      window.clearTimeout(initialCheck);
+      window.clearInterval(timer);
+    };
   }, [active]);
 
-  return null;
+  const unreadCount = useMemo(() => {
+    if (currentTime === null) return 0;
+    return reminders.filter((item) => {
+      const reminderTime = new Date(item.reminder_at as string).getTime();
+      return reminderTime <= currentTime && !seenNotifications[reminderMarker(item)];
+    }).length;
+  }, [currentTime, reminders, seenNotifications]);
+
+  const value = useMemo<NotificationContextValue>(
+    () => ({
+      reminders,
+      unreadCount,
+      loading,
+      lastUpdatedAt,
+      currentTime,
+      refresh: refreshReminders,
+      markSeen,
+      markAllSeen,
+    }),
+    [reminders, unreadCount, loading, lastUpdatedAt, currentTime, refreshReminders, markSeen, markAllSeen],
+  );
+
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
 }
 
-export { NOTIFICATION_CHANGE_EVENT };
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (!context) throw new Error("useNotifications must be used inside NotificationProvider.");
+  return context;
+}
+
+export function notifyNotificationDataChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(NOTIFICATION_DATA_CHANGE_EVENT));
+  }
+}

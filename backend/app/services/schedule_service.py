@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -9,6 +10,7 @@ from app.models.habit import Habit
 from app.models.schedule_event import ScheduleEvent
 from app.models.task import Task
 from app.models.user import User
+from app.models.user_profile import UserProfile
 from app.repositories.schedule_repo import get_event, list_events
 from app.repositories.task_repo import get_task
 from app.schemas.schedule_schema import ScheduleEventCreate, ScheduleEventUpdate
@@ -34,14 +36,34 @@ def _habit_occurs(habit: Habit, target: date) -> bool:
     return False
 
 
-def _habit_datetime(target: date, reminder_time: str | None) -> datetime:
+def _user_timezone(db: Session, user_id: int) -> ZoneInfo:
+    timezone_name = db.scalar(
+        select(UserProfile.timezone).where(UserProfile.user_id == user_id)
+    ) or "UTC"
+    try:
+        return ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo("UTC")
+
+
+def _habit_datetime(
+    target: date,
+    reminder_time: str | None,
+    user_timezone: ZoneInfo,
+) -> datetime:
     hour, minute = (9, 0)
     if reminder_time:
         try:
             hour, minute = [int(part) for part in reminder_time.split(":", 1)]
         except (TypeError, ValueError):
             pass
-    return datetime.combine(target, time(hour=hour, minute=minute), tzinfo=timezone.utc)
+
+    local_datetime = datetime.combine(
+        target,
+        time(hour=hour, minute=minute),
+        tzinfo=user_timezone,
+    )
+    return local_datetime.astimezone(timezone.utc)
 
 
 def _serialize_event(event: ScheduleEvent) -> dict:
@@ -73,6 +95,7 @@ def get_workspace(db: Session, user: User, range_start: date, range_end: date) -
     start_dt = _day_start(range_start)
     end_dt = _day_start(range_end + timedelta(days=1))
     now = datetime.now(timezone.utc)
+    user_timezone = _user_timezone(db, user.id)
 
     events = list_events(db, user.id, range_start=start_dt, range_end=end_dt)
     tasks = list(
@@ -142,7 +165,7 @@ def get_workspace(db: Session, user: User, range_start: date, range_end: date) -
         for habit in habits:
             if not _habit_occurs(habit, cursor):
                 continue
-            start_at = _habit_datetime(cursor, habit.reminder_time)
+            start_at = _habit_datetime(cursor, habit.reminder_time, user_timezone)
             items.append(
                 {
                     "id": f"habit-{habit.id}-{cursor.isoformat()}",
@@ -303,6 +326,7 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
 
     assert isinstance(data, SmartScheduleRequest)
     now = datetime.now(timezone.utc)
+    user_timezone = _user_timezone(db, user.id)
     start_dt = _day_start(data.range_start)
     end_dt = _day_start(data.range_end + timedelta(days=1))
 
@@ -354,7 +378,7 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
     while cursor_day <= data.range_end:
         for habit in habits:
             if _habit_occurs(habit, cursor_day):
-                habit_start = _habit_datetime(cursor_day, habit.reminder_time)
+                habit_start = _habit_datetime(cursor_day, habit.reminder_time, user_timezone)
                 busy.append((habit_start, habit_start + timedelta(minutes=15)))
         cursor_day += timedelta(days=1)
 

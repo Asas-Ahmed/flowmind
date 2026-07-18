@@ -143,6 +143,18 @@ export async function apiRequest<T>(
     throw new Error(message);
   }
 
+  const method = (requestOptions.method ?? "GET").toUpperCase();
+  const changesReminderData =
+    method !== "GET" &&
+    (endpoint.startsWith("/api/tasks") ||
+      endpoint.startsWith("/api/habits") ||
+      endpoint.startsWith("/api/schedule") ||
+      endpoint.startsWith("/api/profile"));
+
+  if (changesReminderData && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("flowmind:notification-data-change"));
+  }
+
   if (response.status === 204) {
     return undefined as T;
   }

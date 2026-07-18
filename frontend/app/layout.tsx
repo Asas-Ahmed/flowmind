@@ -69,8 +69,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <NotificationProvider />
-          {children}
+          <NotificationProvider>{children}</NotificationProvider>
         </ThemeProvider>
       </body>
     </html>
