@@ -10,6 +10,7 @@ from app.models.schedule_event import ScheduleEvent
 from app.models.task import Task
 from app.models.user import User
 from app.models.user_profile import UserProfile
+from app.services.productivity_service import get_productivity
 
 
 def _day_bounds(day: date) -> tuple[datetime, datetime]:
@@ -93,14 +94,16 @@ def get_dashboard(db: Session, user: User) -> dict:
     due_habits = [habit for habit in habits if _is_habit_due(habit, today)]
     completed_habits = [habit for habit in due_habits if completion_by_habit_date.get((habit.id, today), 0) >= habit.target_count]
 
-    task_rate = _clamp((len(completed_today) / max(1, len(created_or_due_today))) * 100)
-    habit_rate = _clamp((len(completed_habits) / max(1, len(due_habits))) * 100)
-    focus_rate = _clamp((today_focus / max(1, focus_goal)) * 100)
-    overdue_penalty = min(20, len(overdue) * 4)
-    productivity_score = _clamp(task_rate * 0.4 + habit_rate * 0.3 + focus_rate * 0.3 - overdue_penalty)
+    productivity = get_productivity(db, user)
+    productivity_score = productivity["score"]
+    score_change = productivity["score_change"]
+    component_scores = {item["key"]: item["score"] for item in productivity["components"]}
+    task_rate = component_scores.get("tasks", 0)
+    habit_rate = component_scores.get("habits", 0)
+    focus_rate = component_scores.get("focus", 0)
+    shared_trend = {item["date"]: item for item in productivity["trend"]}
 
     trend = []
-    daily_scores: list[int] = []
     for offset in range(7):
         day = week_start + timedelta(days=offset)
         start, end = _day_bounds(day)
@@ -116,11 +119,7 @@ def get_dashboard(db: Session, user: User) -> dict:
             for habit in day_due_habits
             if completion_by_habit_date.get((habit.id, day), 0) >= habit.target_count
         )
-        day_task_score = _clamp(len(day_tasks) * 25)
-        day_habit_score = _clamp((day_habits / max(1, len(day_due_habits))) * 100)
-        day_focus_score = _clamp((day_focus / max(1, focus_goal)) * 100)
-        score = _clamp(day_task_score * 0.4 + day_habit_score * 0.3 + day_focus_score * 0.3)
-        daily_scores.append(score)
+        score = shared_trend.get(day, {}).get("score", 0)
         trend.append({
             "date": day,
             "day": day.strftime("%a"),
@@ -130,7 +129,6 @@ def get_dashboard(db: Session, user: User) -> dict:
             "habits_completed": day_habits,
         })
 
-    score_change = daily_scores[-1] - daily_scores[-2] if len(daily_scores) > 1 else 0
 
     priority_order = {"urgent_important": 0, "important_not_urgent": 1, "urgent_not_important": 2, "not_urgent_not_important": 3}
     priority_tasks = sorted(

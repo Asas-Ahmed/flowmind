@@ -1,4 +1,5 @@
 import type { DashboardData } from "@/types/dashboard";
+import type { ProductivityData } from "@/types/productivity";
 
 import type {
   Task,
@@ -405,4 +406,7 @@ export function deleteScheduleEvent(eventId: number) {
 
 export function getDashboardData() {
   return apiRequest<DashboardData>("/api/dashboard", { method: "GET" });
+}
+export function getProductivityData() {
+  return apiRequest<ProductivityData>("/api/productivity", { method: "GET" });
 }
