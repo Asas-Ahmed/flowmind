@@ -1,4 +1,9 @@
 import type { DashboardData } from "@/types/dashboard";
+import type {
+  EnergyCheckIn,
+  EnergyCheckInPayload,
+  EnergyWorkspace,
+} from "@/types/energy";
 import type { ProductivityData } from "@/types/productivity";
 import type {
   MovementBreak,
@@ -431,6 +436,24 @@ export function recordMovementBreak(payload: MovementBreakPayload) {
 
 export function deleteMovementBreak(breakId: number) {
   return apiRequest<void>(`/api/movement/breaks/${breakId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export function getEnergyWorkspace() {
+  return apiRequest<EnergyWorkspace>("/api/energy/workspace", { method: "GET" });
+}
+
+export function createEnergyCheckIn(payload: EnergyCheckInPayload) {
+  return apiRequest<EnergyCheckIn>("/api/energy/checkins", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteEnergyCheckIn(checkInId: number) {
+  return apiRequest<void>(`/api/energy/checkins/${checkInId}`, {
     method: "DELETE",
   });
 }

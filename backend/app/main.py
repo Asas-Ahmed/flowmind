@@ -15,9 +15,11 @@ from app.models.habit import Habit, HabitCompletion
 from app.models.focus_session import FocusSession
 from app.models.schedule_event import ScheduleEvent
 from app.models.movement_break import MovementBreak
+from app.models.energy_checkin import EnergyCheckIn
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router
+from app.api.energy import router as energy_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -43,6 +45,7 @@ app.include_router(schedule_router)
 app.include_router(dashboard_router)
 app.include_router(productivity_router)
 app.include_router(movement_router)
+app.include_router(energy_router)
 
 @app.get("/")
 def root():

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import {
   BarChart3,
+  BatteryCharging,
   Gauge,
   Brain,
   CalendarDays,
@@ -79,6 +80,11 @@ const navigationItems: NavigationItem[] = [
     icon: PersonStanding,
   },
   {
+    label: "Energy Check-In",
+    href: "/energy",
+    icon: BatteryCharging,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -134,7 +140,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
