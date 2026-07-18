@@ -9,6 +9,7 @@ import {
   Brain,
   CalendarDays,
   CalendarRange,
+  Grid3X3,
   Clock3,
   BellOff,
   BrainCircuit,
@@ -86,6 +87,11 @@ const navigationItems: NavigationItem[] = [
     label: "Deep Work",
     href: "/deep-work",
     icon: Waves,
+  },
+  {
+    label: "Productivity Heatmap",
+    href: "/productivity-heatmap",
+    icon: Grid3X3,
   },
   {
     label: "Weekly Review",
@@ -218,7 +224,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Deep Work", "Weekly Review", "Activity Timeline", "Time Tracking", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Deep Work", "Productivity Heatmap", "Weekly Review", "Activity Timeline", "Time Tracking", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

@@ -1,3 +1,4 @@
+import type { ProductivityHeatmapWorkspace } from "@/types/productivity-heatmap";
 import type { DeepWorkWorkspace } from "@/types/deep-work";
 import type { WeeklyReview } from "@/types/weekly-review";
 import type { ActivityTimeline } from "@/types/activity";
@@ -742,4 +743,10 @@ export function getDeepWorkWorkspace() {
 
 export function getWeeklyReview(weekOffset = 0) {
   return apiRequest<WeeklyReview>(`/api/weekly-review/workspace?week_offset=${weekOffset}`, { method: "GET" });
+}
+
+
+export function getProductivityHeatmap(year?: number) {
+  const query = year ? `?year=${year}` : "";
+  return apiRequest<ProductivityHeatmapWorkspace>(`/api/productivity-heatmap/workspace${query}`, { method: "GET" });
 }
