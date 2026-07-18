@@ -1,5 +1,10 @@
 import type { DashboardData } from "@/types/dashboard";
 import type {
+  CognitiveLoadEntry,
+  CognitiveLoadEntryPayload,
+  CognitiveLoadWorkspace,
+} from "@/types/cognitive-load";
+import type {
   EnergyCheckIn,
   EnergyCheckInPayload,
   EnergyWorkspace,
@@ -473,6 +478,24 @@ export function createSleepRecord(payload: SleepRecordPayload) {
 
 export function deleteSleepRecord(recordId: number) {
   return apiRequest<void>(`/api/sleep/records/${recordId}`, {
+    method: "DELETE",
+  });
+}
+
+
+export function getCognitiveLoadWorkspace() {
+  return apiRequest<CognitiveLoadWorkspace>("/api/cognitive-load/workspace", { method: "GET" });
+}
+
+export function createCognitiveLoadEntry(payload: CognitiveLoadEntryPayload) {
+  return apiRequest<CognitiveLoadEntry>("/api/cognitive-load/entries", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteCognitiveLoadEntry(entryId: number) {
+  return apiRequest<void>(`/api/cognitive-load/entries/${entryId}`, {
     method: "DELETE",
   });
 }

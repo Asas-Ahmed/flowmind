@@ -7,6 +7,7 @@ import {
   Gauge,
   Brain,
   CalendarDays,
+  BrainCircuit,
   Flame,
   Eye,
   LayoutDashboard,
@@ -91,6 +92,11 @@ const navigationItems: NavigationItem[] = [
     icon: MoonStar,
   },
   {
+    label: "Cognitive Load",
+    href: "/cognitive-load",
+    icon: BrainCircuit,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -146,7 +152,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
