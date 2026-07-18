@@ -32,6 +32,7 @@ import {
   startFocusSession,
 } from "@/lib/api";
 import type {
+  FocusExperience,
   FocusMode,
   FocusSession,
   FocusSessionPayload,
@@ -96,6 +97,8 @@ export function FocusShell() {
   const [elapsed, setElapsed] = useState(0);
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState("");
+  const [experience, setExperience] = useState<FocusExperience | null>(null);
+  const [showReflection, setShowReflection] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -225,18 +228,25 @@ export function FocusShell() {
     }
   }
 
-  async function handleComplete() {
+  function handleComplete() {
+    if (!activeSession) return;
+    setRunning(false);
+    setShowReflection(true);
+  }
+
+  async function submitReflection() {
     if (!activeSession) return;
     setBusy(true);
     setError("");
     try {
-      await completeFocusSession(activeSession.id, elapsed, note || null);
-      setRunning(false);
+      await completeFocusSession(activeSession.id, elapsed, note || null, experience);
+      setShowReflection(false);
       setElapsed(0);
       setNote("");
+      setExperience(null);
       await loadWorkspace();
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Unable to complete session");
+      setError(requestError instanceof Error ? requestError.message : "Unable to save session reflection");
     } finally {
       setBusy(false);
     }
@@ -251,6 +261,8 @@ export function FocusShell() {
       setRunning(false);
       setElapsed(0);
       setNote("");
+      setExperience(null);
+      setShowReflection(false);
       await loadWorkspace();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to cancel session");
@@ -369,7 +381,6 @@ export function FocusShell() {
                       </div>
                     ) : (
                       <div className="mt-8 w-full space-y-4">
-                        <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} placeholder="Optional session note..." className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus:border-blue-400" />
                         <div className="flex flex-wrap justify-center gap-3">
                           {running ? <TimerButton label="Pause" icon={Pause} onClick={handlePause} disabled={busy} /> : <TimerButton label="Resume" icon={Play} onClick={handleResume} disabled={busy} />}
                           <TimerButton label="Complete" icon={CheckCircle2} onClick={handleComplete} disabled={busy} primary />
@@ -465,11 +476,32 @@ export function FocusShell() {
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/[0.09] dark:bg-[#0a0e1a] sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3"><div><div className="flex items-center gap-2"><History className="h-5 w-5 text-slate-500" /><h2 className="text-lg font-bold">Session history</h2></div><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Your latest focus blocks and intentional breaks.</p></div><button type="button" onClick={() => void loadWorkspace()} className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/[0.05]"><RotateCcw className="h-3.5 w-3.5" /> Refresh</button></div>
             <div className="mt-5 divide-y divide-slate-100 dark:divide-white/[0.06]">
-              {(workspace?.recent_sessions ?? []).length === 0 ? <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-slate-200 text-center dark:border-white/10"><div><TimerReset className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-sm font-semibold text-slate-500">No focus history yet</p></div></div> : workspace?.recent_sessions.map((session) => <div key={session.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">{session.status === "completed" ? <CheckCircle2 className="h-5 w-5" /> : <Clock3 className="h-5 w-5" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-bold">{session.title}</p><span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${statusStyle(session.status)}`}>{session.status}</span></div><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{modeLabel(session.mode)} · {formatDate(session.started_at)}{session.note ? ` · ${session.note}` : ""}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="text-right"><p className="text-sm font-bold">{formatMinutes(Math.round(session.elapsed_seconds / 60))}</p><p className="text-[10px] uppercase tracking-wider text-slate-400">of {session.planned_minutes}m</p></div>{!["active", "paused"].includes(session.status) && <button type="button" disabled={busy} onClick={() => void handleDelete(session.id)} aria-label="Delete session" className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>}</div></div>)}
+              {(workspace?.recent_sessions ?? []).length === 0 ? <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-slate-200 text-center dark:border-white/10"><div><TimerReset className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-sm font-semibold text-slate-500">No focus history yet</p></div></div> : workspace?.recent_sessions.map((session) => <div key={session.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">{session.status === "completed" ? <CheckCircle2 className="h-5 w-5" /> : <Clock3 className="h-5 w-5" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="truncate text-sm font-bold">{session.title}</p><span className={`rounded-full border px-2 py-0.5 text-[10px] font-bold capitalize ${statusStyle(session.status)}`}>{session.status}</span></div><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{modeLabel(session.mode)} · {formatDate(session.started_at)}{session.experience ? ` · ${session.experience === "great" ? "🙂 Great" : session.experience === "okay" ? "😐 Okay" : "☹ Difficult"}` : ""}{session.note ? ` · ${session.note}` : ""}</p></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="text-right"><p className="text-sm font-bold">{formatMinutes(Math.round(session.elapsed_seconds / 60))}</p><p className="text-[10px] uppercase tracking-wider text-slate-400">of {session.planned_minutes}m</p></div>{!["active", "paused"].includes(session.status) && <button type="button" disabled={busy} onClick={() => void handleDelete(session.id)} aria-label="Delete session" className="rounded-xl p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>}</div></div>)}
             </div>
           </section>
         </div>
       </motion.main>
+
+      {showReflection && activeSession && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[28px] border border-white/20 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#0a0e1a] sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">Session reflection</p><h2 className="mt-2 text-2xl font-bold">How did this session go?</h2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">A quick reflection helps FlowMind understand which sessions work best for you.</p></div>
+              <button type="button" disabled={busy} onClick={() => { setShowReflection(false); if (activeSession.status === "active" && remaining > 0) setRunning(true); }} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {([['great', '🙂', 'Great'], ['okay', '😐', 'Okay'], ['difficult', '☹', 'Difficult']] as const).map(([value, emoji, label]) => (
+                <button key={value} type="button" onClick={() => setExperience(value)} className={`rounded-2xl border px-3 py-4 text-center transition ${experience === value ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-500/10 dark:bg-blue-500/10' : 'border-slate-200 hover:border-slate-300 dark:border-white/10 dark:hover:bg-white/[0.05]'}`}><span className="block text-2xl">{emoji}</span><span className="mt-2 block text-sm font-bold">{label}</span></button>
+              ))}
+            </div>
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={1000} rows={4} placeholder="What did you accomplish? What made the session easier or harder?" className="mt-5 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus:border-blue-400" />
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button type="button" disabled={busy} onClick={() => { setExperience(null); setNote(''); void submitReflection(); }} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 dark:border-white/10 dark:text-slate-300">Skip reflection</button>
+              <button type="button" disabled={busy || !experience} onClick={() => void submitReflection()} className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">Save & complete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <WorkspaceNavigation variant="mobile" />
     </div>

@@ -32,6 +32,7 @@ class FocusSession(Base):
         DateTime(timezone=True), nullable=True, index=True
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    experience: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

@@ -1,5 +1,6 @@
 export type FocusMode = "focus" | "short_break" | "long_break";
 export type FocusStatus = "active" | "paused" | "completed" | "cancelled";
+export type FocusExperience = "great" | "okay" | "difficult";
 
 export type FocusSession = {
   id: number;
@@ -14,6 +15,7 @@ export type FocusSession = {
   paused_at: string | null;
   completed_at: string | null;
   note: string | null;
+  experience: FocusExperience | null;
   created_at: string;
   updated_at: string;
 };

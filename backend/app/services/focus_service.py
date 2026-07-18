@@ -247,6 +247,7 @@ def complete_session(
     session.status = "completed"
     session.elapsed_seconds = data.elapsed_seconds
     session.note = data.note
+    session.experience = data.experience
     session.completed_at = datetime.now(timezone.utc)
     session.paused_at = None
     session.updated_at = datetime.now(timezone.utc)

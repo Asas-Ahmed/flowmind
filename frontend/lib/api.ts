@@ -411,10 +411,11 @@ export function completeFocusSession(
   sessionId: number,
   elapsedSeconds: number,
   note: string | null,
+  experience: "great" | "okay" | "difficult" | null,
 ) {
   return apiRequest<FocusSession>(`/api/focus/sessions/${sessionId}/complete`, {
     method: "PUT",
-    body: JSON.stringify({ elapsed_seconds: elapsedSeconds, note }),
+    body: JSON.stringify({ elapsed_seconds: elapsedSeconds, note, experience }),
   });
 }
 

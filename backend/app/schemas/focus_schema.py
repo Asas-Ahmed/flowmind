@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 FocusMode = Literal["focus", "short_break", "long_break"]
 FocusStatus = Literal["active", "paused", "completed", "cancelled"]
+FocusExperience = Literal["great", "okay", "difficult"]
 
 
 class FocusSessionCreate(BaseModel):
@@ -22,6 +23,15 @@ class FocusSessionCreate(BaseModel):
 class FocusSessionAction(BaseModel):
     elapsed_seconds: int = Field(default=0, ge=0, le=24 * 60 * 60)
     note: str | None = Field(default=None, max_length=1000)
+    experience: FocusExperience | None = None
+
+    @field_validator("note")
+    @classmethod
+    def clean_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = " ".join(value.strip().split())
+        return cleaned or None
 
 
 class FocusSessionResponse(BaseModel):
@@ -37,6 +47,7 @@ class FocusSessionResponse(BaseModel):
     paused_at: datetime | None
     completed_at: datetime | None
     note: str | None
+    experience: FocusExperience | None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
