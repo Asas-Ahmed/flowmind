@@ -32,6 +32,7 @@ from app.api.if_then import router as if_then_router
 from app.api.distractions import router as distractions_router
 from app.api.procrastination import router as procrastination_router
 from app.api.experiments import router as experiments_router
+from app.api.burnout import router as burnout_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -64,6 +65,7 @@ app.include_router(if_then_router)
 app.include_router(distractions_router)
 app.include_router(procrastination_router)
 app.include_router(experiments_router)
+app.include_router(burnout_router)
 
 @app.get("/")
 def root():

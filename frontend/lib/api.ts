@@ -1,3 +1,4 @@
+import type { BurnoutWorkspace } from "@/types/burnout";
 import type {
   ExperimentPayload,
   ExperimentTrialPayload,
@@ -618,4 +619,9 @@ export function completeProductivityExperiment(experimentId: number) {
 
 export function deleteProductivityExperiment(experimentId: number) {
   return apiRequest<void>(`/api/experiments/${experimentId}`, { method: "DELETE" });
+}
+
+
+export function getBurnoutWorkspace() {
+  return apiRequest<BurnoutWorkspace>("/api/burnout/workspace", { method: "GET" });
 }
