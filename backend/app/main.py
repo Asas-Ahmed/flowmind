@@ -14,7 +14,6 @@ from app.api.schedule import router as schedule_router
 from app.models.habit import Habit, HabitCompletion
 from app.models.focus_session import FocusSession
 from app.models.schedule_event import ScheduleEvent
-from app.models.productivity_score import ProductivityScore
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 

@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,12 +9,35 @@ from app.models.habit import Habit, HabitCompletion
 from app.models.task import Task
 from app.models.user import User
 from app.models.user_profile import UserProfile
-from app.models.productivity_score import ProductivityScore
+
+DEFAULT_TIMEZONE = "Asia/Colombo"
+DEFAULT_FOCUS_GOAL_MINUTES = 120
 
 
-def _day_bounds(day: date) -> tuple[datetime, datetime]:
-    start = datetime.combine(day, time.min, tzinfo=timezone.utc)
-    return start, start + timedelta(days=1)
+def _user_timezone(timezone_name: str | None) -> ZoneInfo:
+    try:
+        return ZoneInfo(timezone_name or DEFAULT_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        return ZoneInfo(DEFAULT_TIMEZONE)
+
+
+def _as_utc(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _day_bounds(day: date, user_timezone: ZoneInfo) -> tuple[datetime, datetime]:
+    local_start = datetime.combine(day, time.min, tzinfo=user_timezone)
+    local_end = local_start + timedelta(days=1)
+    return local_start.astimezone(timezone.utc), local_end.astimezone(timezone.utc)
+
+
+def _in_range(value: datetime | None, start: datetime, end: datetime) -> bool:
+    utc_value = _as_utc(value)
+    return utc_value is not None and start <= utc_value < end
 
 
 def _clamp(value: float) -> int:
@@ -51,49 +75,72 @@ def _daily_metrics(
     completions: dict[tuple[int, date], int],
     sessions: list[FocusSession],
     focus_goal: int,
+    user_timezone: ZoneInfo,
+    now_utc: datetime,
 ) -> dict:
-    start, end = _day_bounds(day)
+    start, end = _day_bounds(day, user_timezone)
+    cutoff = min(end, now_utc) if start <= now_utc < end else end
 
-    relevant_tasks = [
-        task
-        for task in tasks
-        if (task.due_at and start <= task.due_at < end)
-        or (start <= task.created_at < end)
-    ]
-    completed_tasks = [
-        task
-        for task in tasks
-        if task.completed_at and start <= task.completed_at < end
-    ]
-    overdue_tasks = [
-        task
-        for task in tasks
-        if task.due_at and task.due_at < start and task.status != "completed"
-    ]
+    relevant_tasks: list[Task] = []
+    completed_tasks = 0
+
+    for task in tasks:
+        created_at = _as_utc(task.created_at)
+        due_at = _as_utc(task.due_at)
+        completed_at = _as_utc(task.completed_at)
+
+        if created_at is None or created_at >= end:
+            continue
+
+        created_during_day = start <= created_at < end
+        due_during_day = due_at is not None and start <= due_at < end
+        completed_during_day = completed_at is not None and start <= completed_at < end
+
+        if created_during_day or due_during_day or completed_during_day:
+            relevant_tasks.append(task)
+            if completed_at is not None and completed_at < end:
+                completed_tasks += 1
+
+    overdue_tasks = 0
+    for task in tasks:
+        created_at = _as_utc(task.created_at)
+        due_at = _as_utc(task.due_at)
+        completed_at = _as_utc(task.completed_at)
+
+        if created_at is None or created_at >= cutoff or due_at is None:
+            continue
+        if due_at < cutoff and (completed_at is None or completed_at >= cutoff):
+            overdue_tasks += 1
 
     due_habits = [habit for habit in habits if _is_habit_due(habit, day)]
-    completed_habits = [
-        habit
+    completed_habits = sum(
+        1
         for habit in due_habits
-        if completions.get((habit.id, day), 0) >= habit.target_count
-    ]
+        if completions.get((habit.id, day), 0) >= max(1, habit.target_count)
+    )
 
-    focus_minutes = sum(
-        session.elapsed_seconds
+    focus_seconds = sum(
+        max(0, session.elapsed_seconds)
         for session in sessions
         if session.mode == "focus"
         and session.status == "completed"
-        and start <= session.started_at < end
-    ) // 60
-
-    task_score = _clamp(
-        (len(completed_tasks) / max(1, len(relevant_tasks))) * 100
+        and _in_range(session.completed_at or session.started_at, start, end)
     )
-    habit_score = _clamp(
-        (len(completed_habits) / max(1, len(due_habits))) * 100
+    focus_minutes = focus_seconds // 60
+
+    relevant_task_count = len(relevant_tasks)
+    task_score = (
+        _clamp((completed_tasks / relevant_task_count) * 100)
+        if relevant_task_count
+        else 0
+    )
+    habit_score = (
+        _clamp((completed_habits / len(due_habits)) * 100)
+        if due_habits
+        else 0
     )
     focus_score = _clamp((focus_minutes / max(1, focus_goal)) * 100)
-    overdue_penalty = min(20, len(overdue_tasks) * 4)
+    overdue_penalty = min(20, overdue_tasks * 4)
     score = _clamp(
         task_score * 0.40
         + habit_score * 0.30
@@ -106,68 +153,41 @@ def _daily_metrics(
         "task_score": task_score,
         "habit_score": habit_score,
         "focus_score": focus_score,
-        "completed_tasks": len(completed_tasks),
-        "relevant_tasks": len(relevant_tasks),
-        "completed_habits": len(completed_habits),
+        "completed_tasks": completed_tasks,
+        "relevant_tasks": relevant_task_count,
+        "completed_habits": completed_habits,
         "due_habits": len(due_habits),
         "focus_minutes": focus_minutes,
-        "overdue_tasks": len(overdue_tasks),
+        "overdue_tasks": overdue_tasks,
         "overdue_penalty": overdue_penalty,
     }
 
 
-def _save_daily_score(
-    db: Session,
-    user_id: int,
-    score_date: date,
-    metrics: dict,
-) -> ProductivityScore:
-    record = db.scalar(
-        select(ProductivityScore).where(
-            ProductivityScore.user_id == user_id,
-            ProductivityScore.score_date == score_date,
-        )
-    )
-    if record is None:
-        record = ProductivityScore(user_id=user_id, score_date=score_date)
-        db.add(record)
-
-    record.score = metrics["score"]
-    record.task_score = metrics["task_score"]
-    record.habit_score = metrics["habit_score"]
-    record.focus_score = metrics["focus_score"]
-    record.overdue_penalty = metrics["overdue_penalty"]
-    record.level = _level(metrics["score"])
-    record.metrics = {
-        "completed_tasks": metrics["completed_tasks"],
-        "relevant_tasks": metrics["relevant_tasks"],
-        "completed_habits": metrics["completed_habits"],
-        "due_habits": metrics["due_habits"],
-        "focus_minutes": metrics["focus_minutes"],
-        "overdue_tasks": metrics["overdue_tasks"],
-    }
-    record.calculated_at = datetime.now(timezone.utc)
-    return record
-
-
-def _stored_trend_point(record: ProductivityScore) -> dict:
-    metrics = record.metrics or {}
+def _trend_point(day: date, metrics: dict) -> dict:
     return {
-        "date": record.score_date,
-        "day": record.score_date.strftime("%a"),
-        "score": record.score,
-        "tasks": int(metrics.get("completed_tasks", 0)),
-        "habits": int(metrics.get("completed_habits", 0)),
-        "focus_minutes": int(metrics.get("focus_minutes", 0)),
-        "overdue_penalty": record.overdue_penalty,
+        "date": day,
+        "day": day.strftime("%a"),
+        "score": metrics["score"],
+        "tasks": metrics["completed_tasks"],
+        "habits": metrics["completed_habits"],
+        "focus_minutes": metrics["focus_minutes"],
+        "overdue_penalty": metrics["overdue_penalty"],
     }
 
 
 def get_productivity(db: Session, user: User) -> dict:
-    today = date.today()
+    profile = db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
+    user_timezone = _user_timezone(profile.timezone if profile else None)
+    focus_goal = max(
+        1,
+        profile.daily_focus_goal_minutes if profile else DEFAULT_FOCUS_GOAL_MINUTES,
+    )
+
+    now_utc = datetime.now(timezone.utc)
+    today = now_utc.astimezone(user_timezone).date()
     history_start = today - timedelta(days=29)
-    history_start_dt, _ = _day_bounds(history_start)
-    _, tomorrow_dt = _day_bounds(today)
+    history_start_dt, _ = _day_bounds(history_start, user_timezone)
+    _, tomorrow_dt = _day_bounds(today, user_timezone)
 
     tasks = list(db.scalars(select(Task).where(Task.user_id == user.id)).all())
     habits = list(
@@ -196,8 +216,6 @@ def get_productivity(db: Session, user: User) -> dict:
             )
         ).all()
     )
-    profile = db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
-    focus_goal = profile.daily_focus_goal_minutes if profile else 120
 
     completion_map = {
         (completion.habit_id, completion.completion_date): completion.count
@@ -206,6 +224,8 @@ def get_productivity(db: Session, user: User) -> dict:
 
     trend = []
     active_days = 0
+    daily_results: dict[date, dict] = {}
+
     for offset in range(30):
         day = history_start + timedelta(days=offset)
         metrics = _daily_metrics(
@@ -215,35 +235,21 @@ def get_productivity(db: Session, user: User) -> dict:
             completion_map,
             sessions,
             focus_goal,
+            user_timezone,
+            now_utc,
         )
+        daily_results[day] = metrics
+        trend.append(_trend_point(day, metrics))
+
         if (
             metrics["completed_tasks"]
             or metrics["completed_habits"]
             or metrics["focus_minutes"]
         ):
             active_days += 1
-        record = _save_daily_score(db, user.id, day, metrics)
-        trend.append(_stored_trend_point(record))
 
-    today_metrics = _daily_metrics(
-        today,
-        tasks,
-        habits,
-        completion_map,
-        sessions,
-        focus_goal,
-    )
-    previous_metrics = _daily_metrics(
-        today - timedelta(days=1),
-        tasks,
-        habits,
-        completion_map,
-        sessions,
-        focus_goal,
-    )
-
-    db.commit()
-
+    today_metrics = daily_results[today]
+    previous_metrics = daily_results[today - timedelta(days=1)]
     score = today_metrics["score"]
     level = _level(score)
 
@@ -257,7 +263,7 @@ def get_productivity(db: Session, user: User) -> dict:
             "current": today_metrics["completed_tasks"],
             "target": today_metrics["relevant_tasks"],
             "unit": "tasks",
-            "explanation": "Completed tasks compared with tasks created or due today.",
+            "explanation": "Tasks completed from those created, due, or completed today.",
             "action_label": "Open tasks",
             "action_href": "/tasks",
         },
@@ -311,7 +317,7 @@ def get_productivity(db: Session, user: User) -> dict:
                 "action_href": "/focus",
             }
         )
-    if today_metrics["habit_score"] < 100 and today_metrics["due_habits"]:
+    if today_metrics["due_habits"] and today_metrics["habit_score"] < 100:
         remaining = today_metrics["due_habits"] - today_metrics["completed_habits"]
         recommendations.append(
             {
@@ -322,7 +328,7 @@ def get_productivity(db: Session, user: User) -> dict:
                 "action_href": "/habits",
             }
         )
-    if today_metrics["task_score"] < 100:
+    if today_metrics["relevant_tasks"] and today_metrics["task_score"] < 100:
         recommendations.append(
             {
                 "title": "Finish a meaningful next action",
@@ -356,7 +362,7 @@ def get_productivity(db: Session, user: User) -> dict:
     )
 
     return {
-        "generated_at": datetime.now(timezone.utc),
+        "generated_at": now_utc,
         "score": score,
         "previous_score": previous_metrics["score"],
         "score_change": score - previous_metrics["score"],
