@@ -16,6 +16,7 @@ import {
   ListTodo,
   MoreHorizontal,
   PersonStanding,
+  Footprints,
   Settings,
   MoonStar,
   Timer,
@@ -109,6 +110,11 @@ const navigationItems: NavigationItem[] = [
     icon: BellOff,
   },
   {
+    label: "Start Small",
+    href: "/procrastination",
+    icon: Footprints,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -164,7 +170,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

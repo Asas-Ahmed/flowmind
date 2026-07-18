@@ -1,5 +1,10 @@
 import type { DashboardData } from "@/types/dashboard";
 import type {
+  ProcrastinationStarter,
+  ProcrastinationStarterPayload,
+  ProcrastinationWorkspace,
+} from "@/types/procrastination";
+import type {
   IfThenOutcome,
   IfThenPlan,
   IfThenPlanPayload,
@@ -558,4 +563,26 @@ export function createDistractionLog(payload: DistractionPayload) {
 
 export function deleteDistractionLog(logId: number) {
   return apiRequest<void>(`/api/distractions/${logId}`, { method: "DELETE" });
+}
+
+
+export function getProcrastinationWorkspace() {
+  return apiRequest<ProcrastinationWorkspace>("/api/procrastination/workspace", { method: "GET" });
+}
+
+export function createProcrastinationStarter(payload: ProcrastinationStarterPayload) {
+  return apiRequest<ProcrastinationStarter>("/api/procrastination/starters", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function toggleProcrastinationStarter(starterId: number) {
+  return apiRequest<ProcrastinationStarter>(`/api/procrastination/starters/${starterId}/toggle`, {
+    method: "PATCH",
+  });
+}
+
+export function deleteProcrastinationStarter(starterId: number) {
+  return apiRequest<void>(`/api/procrastination/starters/${starterId}`, { method: "DELETE" });
 }
