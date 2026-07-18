@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   MoonStar,
   CupSoda,
+  HeartPulse,
   Timer,
   type LucideIcon,
 } from "lucide-react";
@@ -133,6 +134,11 @@ const navigationItems: NavigationItem[] = [
     icon: CupSoda,
   },
   {
+    label: "Recovery Breaks",
+    href: "/recovery",
+    icon: HeartPulse,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -188,7 +194,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
@@ -218,7 +224,7 @@ export function WorkspaceNavigation({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 24, scale: 0.98 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute inset-x-3 bottom-[92px] overflow-hidden rounded-[26px] border border-slate-200/80 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[#0b0f19] dark:shadow-black/60"
+              className="absolute inset-x-3 bottom-[92px] flex max-h-[calc(100dvh-116px)] flex-col overflow-hidden rounded-[26px] border border-slate-200/80 bg-white p-3 shadow-[0_24px_70px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[#0b0f19] dark:shadow-black/60"
             >
               <div className="flex items-center justify-between px-2 pb-3 pt-1">
                 <div>
@@ -239,7 +245,7 @@ export function WorkspaceNavigation({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
                 {moreItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActiveRoute(pathname, item.href);

@@ -1,3 +1,4 @@
+import type { RecoveryBreak, RecoveryBreakPayload, RecoveryWorkspace } from "@/types/recovery";
 import type { NourishmentLog, NourishmentLogPayload, NourishmentWorkspace } from "@/types/nourishment";
 import type { BurnoutWorkspace } from "@/types/burnout";
 import type {
@@ -641,4 +642,20 @@ export function createNourishmentLog(payload: NourishmentLogPayload) {
 
 export function deleteNourishmentLog(logId: number) {
   return apiRequest<void>(`/api/nourishment/logs/${logId}`, { method: "DELETE" });
+}
+
+
+export function getRecoveryWorkspace() {
+  return apiRequest<RecoveryWorkspace>("/api/recovery/workspace", { method: "GET" });
+}
+
+export function createRecoveryBreak(payload: RecoveryBreakPayload) {
+  return apiRequest<RecoveryBreak>("/api/recovery/breaks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteRecoveryBreak(breakId: number) {
+  return apiRequest<void>(`/api/recovery/breaks/${breakId}`, { method: "DELETE" });
 }
