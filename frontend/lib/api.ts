@@ -6,6 +6,11 @@ import type {
   IfThenWorkspace,
 } from "@/types/if-then";
 import type {
+  DistractionLog,
+  DistractionPayload,
+  DistractionWorkspace,
+} from "@/types/distraction";
+import type {
   CognitiveLoadEntry,
   CognitiveLoadEntryPayload,
   CognitiveLoadWorkspace,
@@ -537,4 +542,20 @@ export function recordIfThenOutcome(planId: number, outcome: IfThenOutcome) {
 
 export function deleteIfThenPlan(planId: number) {
   return apiRequest<void>(`/api/if-then/plans/${planId}`, { method: "DELETE" });
+}
+
+
+export function getDistractionWorkspace() {
+  return apiRequest<DistractionWorkspace>("/api/distractions/workspace", { method: "GET" });
+}
+
+export function createDistractionLog(payload: DistractionPayload) {
+  return apiRequest<DistractionLog>("/api/distractions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteDistractionLog(logId: number) {
+  return apiRequest<void>(`/api/distractions/${logId}`, { method: "DELETE" });
 }

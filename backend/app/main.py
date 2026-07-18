@@ -19,6 +19,7 @@ from app.models.energy_checkin import EnergyCheckIn
 from app.models.sleep_record import SleepRecord
 from app.models.cognitive_load import CognitiveLoadEntry
 from app.models.if_then_plan import IfThenPlan
+from app.models.distraction_log import DistractionLog
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router
@@ -26,6 +27,7 @@ from app.api.energy import router as energy_router
 from app.api.sleep import router as sleep_router
 from app.api.cognitive_load import router as cognitive_load_router
 from app.api.if_then import router as if_then_router
+from app.api.distractions import router as distractions_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -55,6 +57,7 @@ app.include_router(energy_router)
 app.include_router(sleep_router)
 app.include_router(cognitive_load_router)
 app.include_router(if_then_router)
+app.include_router(distractions_router)
 
 @app.get("/")
 def root():
