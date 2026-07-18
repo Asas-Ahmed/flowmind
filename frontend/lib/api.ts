@@ -1,3 +1,5 @@
+import type { DashboardData } from "@/types/dashboard";
+
 import type {
   Task,
   TaskCategory,
@@ -399,4 +401,8 @@ export function deleteScheduleEvent(eventId: number) {
   return apiRequest<void>(`/api/schedule/events/${eventId}`, {
     method: "DELETE",
   });
+}
+
+export function getDashboardData() {
+  return apiRequest<DashboardData>("/api/dashboard", { method: "GET" });
 }
