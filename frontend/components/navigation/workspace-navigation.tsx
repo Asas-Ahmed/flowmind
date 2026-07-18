@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   ListTodo,
   MoreHorizontal,
+  PersonStanding,
   Settings,
   Timer,
   type LucideIcon,
@@ -73,6 +74,11 @@ const navigationItems: NavigationItem[] = [
     icon: CalendarDays,
   },
   {
+    label: "Movement",
+    href: "/movement",
+    icon: PersonStanding,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -128,7 +134,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );

@@ -1,5 +1,10 @@
 import type { DashboardData } from "@/types/dashboard";
 import type { ProductivityData } from "@/types/productivity";
+import type {
+  MovementBreak,
+  MovementBreakPayload,
+  MovementWorkspace,
+} from "@/types/movement";
 
 import type {
   Task,
@@ -409,4 +414,23 @@ export function getDashboardData() {
 }
 export function getProductivityData() {
   return apiRequest<ProductivityData>("/api/productivity", { method: "GET" });
+}
+
+
+export function getMovementWorkspace() {
+  return apiRequest<MovementWorkspace>("/api/movement/workspace", { method: "GET" });
+}
+
+export function recordMovementBreak(payload: MovementBreakPayload) {
+  return apiRequest<MovementBreak>("/api/movement/breaks", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+
+export function deleteMovementBreak(breakId: number) {
+  return apiRequest<void>(`/api/movement/breaks/${breakId}`, {
+    method: "DELETE",
+  });
 }
