@@ -1,3 +1,4 @@
+import type { WeeklyReview } from "@/types/weekly-review";
 import type { ActivityTimeline } from "@/types/activity";
 import type {
   ManualTimeEntryPayload,
@@ -731,4 +732,9 @@ export function deleteTimeEntry(entryId: number) {
 
 export function getActivityTimeline(days = 30) {
   return apiRequest<ActivityTimeline>(`/api/activity/timeline?days=${days}&limit=300`, { method: "GET" });
+}
+
+
+export function getWeeklyReview(weekOffset = 0) {
+  return apiRequest<WeeklyReview>(`/api/weekly-review/workspace?week_offset=${weekOffset}`, { method: "GET" });
 }
