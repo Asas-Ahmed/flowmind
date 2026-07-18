@@ -2,6 +2,7 @@ import type { Goal, GoalPayload, GoalsWorkspace } from "@/types/goals";
 import type { ProductivityHeatmapWorkspace } from "@/types/productivity-heatmap";
 import type { DeepWorkWorkspace } from "@/types/deep-work";
 import type { WeeklyReview } from "@/types/weekly-review";
+import type { WeeklyCoach } from "@/types/weekly-coach";
 import type { ActivityTimeline } from "@/types/activity";
 import type {
   ManualTimeEntryPayload,
@@ -770,6 +771,10 @@ export function getDeepWorkWorkspace() {
 
 export function getWeeklyReview(weekOffset = 0) {
   return apiRequest<WeeklyReview>(`/api/weekly-review/workspace?week_offset=${weekOffset}`, { method: "GET" });
+}
+
+export function getWeeklyCoach(weekOffset = 0) {
+  return apiRequest<WeeklyCoach>(`/api/weekly-coach/workspace?week_offset=${weekOffset}`, { method: "GET" });
 }
 
 

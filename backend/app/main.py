@@ -42,6 +42,7 @@ from app.api.recovery import router as recovery_router
 from app.api.time_tracking import router as time_tracking_router
 from app.api.activity import router as activity_router
 from app.api.weekly_review import router as weekly_review_router
+from app.api.weekly_coach import router as weekly_coach_router
 from app.api.deep_work import router as deep_work_router
 from app.api.productivity_heatmap import router as productivity_heatmap_router
 from app.api.goals import router as goals_router
@@ -83,6 +84,7 @@ app.include_router(recovery_router)
 app.include_router(time_tracking_router)
 app.include_router(activity_router)
 app.include_router(weekly_review_router)
+app.include_router(weekly_coach_router)
 app.include_router(deep_work_router)
 app.include_router(productivity_heatmap_router)
 app.include_router(goals_router)
