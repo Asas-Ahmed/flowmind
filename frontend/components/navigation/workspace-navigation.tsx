@@ -17,6 +17,7 @@ import {
   Flame,
   FolderTree,
   Target,
+  Scale,
   GitBranchPlus,
   Eye,
   FlaskConical,
@@ -125,6 +126,11 @@ const navigationItems: NavigationItem[] = [
     label: "Work Categories",
     href: "/work-categories",
     icon: FolderTree,
+  },
+  {
+    label: "Time Budget",
+    href: "/time-budget",
+    icon: Scale,
   },
   {
     label: "Goals & Targets",
@@ -247,7 +253,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Deep Work", "Productivity Heatmap", "Weekly Review", "AI Weekly Coach", "Personal Patterns", "Activity Timeline", "Time Tracking", "Work Categories", "Goals & Targets", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Deep Work", "Productivity Heatmap", "Weekly Review", "AI Weekly Coach", "Personal Patterns", "Activity Timeline", "Time Tracking", "Work Categories", "Time Budget", "Goals & Targets", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
