@@ -53,6 +53,85 @@ def _focus_streaks(sessions: list[FocusSession], today: date) -> tuple[int, int]
     return current, best
 
 
+
+_DURATION_BUCKETS = (
+    (15, "Quick sprint"),
+    (25, "Classic focus"),
+    (40, "Sustained focus"),
+    (50, "Deep work"),
+)
+
+
+def _nearest_duration(minutes: int) -> tuple[int, str]:
+    return min(_DURATION_BUCKETS, key=lambda item: abs(item[0] - minutes))
+
+
+def _adaptive_focus_recommendation(sessions: list[FocusSession]) -> dict:
+    closed = [
+        item
+        for item in sessions
+        if item.mode == "focus" and item.status in ["completed", "cancelled"]
+    ]
+    grouped: dict[int, list[FocusSession]] = {minutes: [] for minutes, _ in _DURATION_BUCKETS}
+    for session in closed:
+        minutes, _ = _nearest_duration(session.planned_minutes)
+        grouped[minutes].append(session)
+
+    profiles = []
+    for minutes, label in _DURATION_BUCKETS:
+        bucket = grouped[minutes]
+        completed = [item for item in bucket if item.status == "completed"]
+        completion_rate = (len(completed) / len(bucket) * 100) if bucket else 0
+        average_progress = (
+            sum(
+                min(1, item.elapsed_seconds / max(60, item.planned_minutes * 60))
+                for item in bucket
+            )
+            / len(bucket)
+            * 100
+            if bucket
+            else 0
+        )
+        performance_score = completion_rate * 0.7 + average_progress * 0.3
+        profiles.append(
+            {
+                "minutes": minutes,
+                "label": label,
+                "sessions": len(bucket),
+                "completed_sessions": len(completed),
+                "completion_rate": round(completion_rate, 1),
+                "average_progress": round(average_progress, 1),
+                "performance_score": round(performance_score, 1),
+            }
+        )
+
+    sample_size = len(closed)
+    eligible = [item for item in profiles if item["sessions"] >= 2]
+    best = max(eligible, key=lambda item: (item["performance_score"], item["sessions"])) if eligible else None
+
+    if sample_size < 3 or best is None:
+        recommended = 25
+        confidence = "learning"
+        message = (
+            "Complete at least three focus sessions so FlowMind can compare which duration works best for you."
+        )
+    else:
+        recommended = best["minutes"]
+        confidence = "strong" if sample_size >= 10 and best["sessions"] >= 4 else "emerging"
+        message = (
+            f"Your {recommended}-minute sessions currently perform best, with "
+            f"{best['completion_rate']:.0f}% completion across {best['sessions']} comparable sessions."
+        )
+
+    return {
+        "recommended_minutes": recommended,
+        "confidence": confidence,
+        "sample_size": sample_size,
+        "message": message,
+        "profiles": profiles,
+    }
+
+
 def get_workspace(db: Session, user: User) -> dict:
     today = datetime.now(timezone.utc).date()
     week_start = today - timedelta(days=6)
@@ -92,8 +171,8 @@ def get_workspace(db: Session, user: User) -> dict:
             }
         )
 
-    all_completed = list_sessions(db, user.id)
-    current_streak, best_streak = _focus_streaks(all_completed, today)
+    all_sessions = list_sessions(db, user.id)
+    current_streak, best_streak = _focus_streaks(all_sessions, today)
 
     profile = getattr(user, "profile", None)
     daily_goal = getattr(profile, "daily_focus_goal_minutes", 120) if profile else 120
@@ -113,6 +192,7 @@ def get_workspace(db: Session, user: User) -> dict:
         "best_streak": best_streak,
         "daily_goal_minutes": daily_goal,
         "daily_points": daily_points,
+        "adaptive_recommendation": _adaptive_focus_recommendation(all_sessions),
     }
 
 

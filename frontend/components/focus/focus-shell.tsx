@@ -167,6 +167,8 @@ export function FocusShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, running, activeSession]);
 
+  const adaptive = workspace?.adaptive_recommendation;
+
   const goalPercent = useMemo(() => {
     if (!workspace?.daily_goal_minutes) return 0;
     return Math.min(100, (workspace.today_minutes / workspace.daily_goal_minutes) * 100);
@@ -268,6 +270,13 @@ export function FocusShell() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function applyAdaptiveDuration() {
+    if (activeSession || !adaptive) return;
+    setMinutes(adaptive.recommended_minutes);
+    setMode("focus");
+    setElapsed(0);
   }
 
   function selectPreset(preset: (typeof PRESETS)[number]) {
@@ -378,6 +387,62 @@ export function FocusShell() {
                 <div className="flex items-center justify-between"><div><p className="text-sm font-bold">Daily focus goal</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Your target from profile settings</p></div><Target className="h-5 w-5 text-blue-500" /></div>
                 <div className="mt-5 flex items-end justify-between"><span className="text-3xl font-bold">{workspace?.today_minutes ?? 0}<span className="ml-1 text-sm font-semibold text-slate-400">/ {workspace?.daily_goal_minutes ?? 120} min</span></span><span className="text-sm font-bold text-blue-600 dark:text-blue-400">{Math.round(goalPercent)}%</span></div>
                 <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 via-violet-500 to-fuchsia-500 transition-all" style={{ width: `${goalPercent}%` }} /></div>
+              </div>
+
+              <div className="rounded-[26px] border border-violet-200/80 bg-gradient-to-br from-violet-50 via-white to-blue-50 p-5 shadow-sm dark:border-violet-400/20 dark:from-violet-500/10 dark:via-[#0a0e1a] dark:to-blue-500/10">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                      <Sparkles className="h-4 w-4 text-violet-500" />
+                      Adaptive focus timer
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Learns from completed and cancelled focus sessions.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-violet-200 bg-white/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:border-violet-400/20 dark:bg-white/[0.06] dark:text-violet-300">
+                    {adaptive?.confidence ?? "learning"}
+                  </span>
+                </div>
+
+                <div className="mt-5 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Recommended duration</p>
+                    <p className="mt-2 text-4xl font-black tracking-tight">{adaptive?.recommended_minutes ?? 25}<span className="ml-1 text-base font-semibold text-slate-400">min</span></p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={applyAdaptiveDuration}
+                    disabled={Boolean(activeSession) || !adaptive}
+                    className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 dark:bg-white dark:text-slate-950"
+                  >
+                    Use duration
+                  </button>
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  {adaptive?.message ?? "FlowMind is preparing your focus recommendation."}
+                </p>
+
+                <div className="mt-5 grid grid-cols-4 gap-2">
+                  {(adaptive?.profiles ?? []).map((profile) => {
+                    const selected = profile.minutes === adaptive?.recommended_minutes;
+                    return (
+                      <div
+                        key={profile.minutes}
+                        className={`rounded-xl border p-2.5 text-center ${selected ? "border-violet-300 bg-violet-100/70 dark:border-violet-400/30 dark:bg-violet-400/10" : "border-slate-200 bg-white/70 dark:border-white/[0.08] dark:bg-white/[0.03]"}`}
+                      >
+                        <p className="text-sm font-black">{profile.minutes}m</p>
+                        <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                          {profile.sessions ? `${profile.completion_rate}% · ${profile.sessions}` : "No data"}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-[10px] leading-4 text-slate-400">
+                  Based on {adaptive?.sample_size ?? 0} closed focus sessions. Recommendations remain explainable and improve as more sessions are recorded.
+                </p>
               </div>
 
               <div className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm dark:border-white/[0.09] dark:bg-[#0a0e1a]">

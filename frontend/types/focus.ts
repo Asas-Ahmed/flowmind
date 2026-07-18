@@ -24,6 +24,24 @@ export type FocusDailyPoint = {
   sessions: number;
 };
 
+export type FocusDurationProfile = {
+  minutes: number;
+  label: string;
+  sessions: number;
+  completed_sessions: number;
+  completion_rate: number;
+  average_progress: number;
+  performance_score: number;
+};
+
+export type AdaptiveFocusRecommendation = {
+  recommended_minutes: number;
+  confidence: "learning" | "emerging" | "strong";
+  sample_size: number;
+  message: string;
+  profiles: FocusDurationProfile[];
+};
+
 export type FocusWorkspace = {
   active_session: FocusSession | null;
   recent_sessions: FocusSession[];
@@ -36,6 +54,7 @@ export type FocusWorkspace = {
   best_streak: number;
   daily_goal_minutes: number;
   daily_points: FocusDailyPoint[];
+  adaptive_recommendation: AdaptiveFocusRecommendation;
 };
 
 export type FocusSessionPayload = {

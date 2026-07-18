@@ -166,9 +166,9 @@ export function WorkspaceNavigation({
   const [moreOpen, setMoreOpen] = useState(false);
 
   if (variant === "mobile") {
-    const primaryItems = navigationItems.filter(
-      (item) => item.mobile && item.label !== "Flow Assistant",
-    );
+    const primaryItems = ["Dashboard", "Tasks", "Habits", "Focus"]
+      .map((label) => navigationItems.find((item) => item.label === label))
+      .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
       ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,

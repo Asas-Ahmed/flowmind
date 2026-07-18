@@ -48,6 +48,24 @@ class FocusDailyPoint(BaseModel):
     sessions: int
 
 
+class FocusDurationProfile(BaseModel):
+    minutes: int
+    label: str
+    sessions: int
+    completed_sessions: int
+    completion_rate: float
+    average_progress: float
+    performance_score: float
+
+
+class AdaptiveFocusRecommendation(BaseModel):
+    recommended_minutes: int
+    confidence: Literal["learning", "emerging", "strong"]
+    sample_size: int
+    message: str
+    profiles: list[FocusDurationProfile]
+
+
 class FocusWorkspaceResponse(BaseModel):
     active_session: FocusSessionResponse | None
     recent_sessions: list[FocusSessionResponse]
@@ -60,3 +78,4 @@ class FocusWorkspaceResponse(BaseModel):
     best_streak: int
     daily_goal_minutes: int
     daily_points: list[FocusDailyPoint]
+    adaptive_recommendation: AdaptiveFocusRecommendation
