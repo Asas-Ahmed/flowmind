@@ -1,3 +1,4 @@
+import type { Goal, GoalPayload, GoalsWorkspace } from "@/types/goals";
 import type { ProductivityHeatmapWorkspace } from "@/types/productivity-heatmap";
 import type { DeepWorkWorkspace } from "@/types/deep-work";
 import type { WeeklyReview } from "@/types/weekly-review";
@@ -776,3 +777,9 @@ export function getProductivityHeatmap(year?: number) {
   const query = year ? `?year=${year}` : "";
   return apiRequest<ProductivityHeatmapWorkspace>(`/api/productivity-heatmap/workspace${query}`, { method: "GET" });
 }
+
+
+export function getGoalsWorkspace() { return apiRequest<GoalsWorkspace>("/api/goals/workspace", { method: "GET" }); }
+export function createGoal(payload: GoalPayload) { return apiRequest<Goal>("/api/goals", { method: "POST", body: JSON.stringify(payload) }); }
+export function updateGoal(goalId: number, payload: Partial<GoalPayload & { is_active: boolean }>) { return apiRequest<Goal>(`/api/goals/${goalId}`, { method: "PATCH", body: JSON.stringify(payload) }); }
+export function deleteGoal(goalId: number) { return apiRequest<void>(`/api/goals/${goalId}`, { method: "DELETE" }); }

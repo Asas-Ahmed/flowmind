@@ -25,6 +25,7 @@ from app.models.productivity_experiment import ProductivityExperiment, Productiv
 from app.models.nourishment_log import NourishmentLog
 from app.models.recovery_break import RecoveryBreak
 from app.models.time_tracking import TimeEntry, TimeTrackingProject, WorkCategory
+from app.models.goal import ProductivityGoal
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router
@@ -43,6 +44,7 @@ from app.api.activity import router as activity_router
 from app.api.weekly_review import router as weekly_review_router
 from app.api.deep_work import router as deep_work_router
 from app.api.productivity_heatmap import router as productivity_heatmap_router
+from app.api.goals import router as goals_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -83,6 +85,7 @@ app.include_router(activity_router)
 app.include_router(weekly_review_router)
 app.include_router(deep_work_router)
 app.include_router(productivity_heatmap_router)
+app.include_router(goals_router)
 
 @app.get("/")
 def root():
