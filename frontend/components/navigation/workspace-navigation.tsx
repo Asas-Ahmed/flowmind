@@ -6,6 +6,7 @@ import {
   Brain,
   CalendarDays,
   Flame,
+  Eye,
   LayoutDashboard,
   ListTodo,
   MoreHorizontal,
@@ -71,6 +72,11 @@ const navigationItems: NavigationItem[] = [
     icon: CalendarDays,
   },
   {
+    label: "Eye Care",
+    href: "/eye-care",
+    icon: Eye,
+  },
+  {
     label: "Analytics",
     icon: BarChart3,
     comingSoon: true,
@@ -116,7 +122,7 @@ export function WorkspaceNavigation({
       (item) => item.mobile && item.label !== "Flow Assistant",
     );
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Eye Care", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
