@@ -11,8 +11,19 @@ from app.schemas.schedule_schema import (
     ScheduleEventResponse,
     ScheduleEventUpdate,
     ScheduleWorkspaceResponse,
+    SmartScheduleApplyRequest,
+    SmartScheduleApplyResponse,
+    SmartScheduleRequest,
+    SmartScheduleResponse,
 )
-from app.services.schedule_service import create_event, delete_event, get_workspace, update_event
+from app.services.schedule_service import (
+    apply_smart_schedule,
+    create_event,
+    delete_event,
+    generate_smart_schedule,
+    get_workspace,
+    update_event,
+)
 
 router = APIRouter(prefix="/api/schedule", tags=["Schedule"])
 
@@ -54,3 +65,21 @@ def remove_event(
 ):
     delete_event(db, current_user, event_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/smart-suggestions", response_model=SmartScheduleResponse)
+def smart_suggestions(
+    data: SmartScheduleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return generate_smart_schedule(db, current_user, data)
+
+
+@router.post("/smart-apply", response_model=SmartScheduleApplyResponse)
+def smart_apply(
+    data: SmartScheduleApplyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return apply_smart_schedule(db, current_user, data)

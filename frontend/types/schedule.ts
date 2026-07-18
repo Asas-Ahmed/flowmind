@@ -59,3 +59,43 @@ export type ScheduleWorkspace = {
   overdue_count: number;
   reminder_count: number;
 };
+
+export type SmartScheduleRequest = {
+  range_start: string;
+  range_end: string;
+  workday_start_hour: number;
+  workday_end_hour: number;
+  slot_minutes: number;
+  break_minutes: number;
+  max_items: number;
+  include_weekends: boolean;
+  timezone_offset_minutes: number;
+};
+
+export type SmartScheduleSuggestion = {
+  task_id: number;
+  task_title: string;
+  start_at: string;
+  end_at: string;
+  duration_minutes: number;
+  score: number;
+  priority_label: string;
+  energy_level: string;
+  due_at: string | null;
+  reason: string;
+  warning: string | null;
+};
+
+export type SmartScheduleResponse = {
+  suggestions: SmartScheduleSuggestion[];
+  unscheduled_task_count: number;
+  scheduled_minutes: number;
+  remaining_task_count: number;
+  explanation: string;
+};
+
+export type SmartScheduleApplyResponse = {
+  created_events: ScheduleEvent[];
+  created_count: number;
+  skipped_count: number;
+};

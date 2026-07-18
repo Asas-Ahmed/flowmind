@@ -67,6 +67,10 @@ import type {
   ScheduleEvent,
   ScheduleEventPayload,
   ScheduleWorkspace,
+  SmartScheduleApplyResponse,
+  SmartScheduleRequest,
+  SmartScheduleResponse,
+  SmartScheduleSuggestion,
 } from "@/types/schedule";
 
 const API_BASE_URL =
@@ -442,6 +446,20 @@ export function updateScheduleEvent(
 export function deleteScheduleEvent(eventId: number) {
   return apiRequest<void>(`/api/schedule/events/${eventId}`, {
     method: "DELETE",
+  });
+}
+
+export function getSmartScheduleSuggestions(payload: SmartScheduleRequest) {
+  return apiRequest<SmartScheduleResponse>("/api/schedule/smart-suggestions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function applySmartSchedule(suggestions: SmartScheduleSuggestion[]) {
+  return apiRequest<SmartScheduleApplyResponse>("/api/schedule/smart-apply", {
+    method: "POST",
+    body: JSON.stringify({ suggestions }),
   });
 }
 

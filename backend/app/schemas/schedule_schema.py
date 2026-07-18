@@ -104,3 +104,57 @@ class ScheduleWorkspaceResponse(BaseModel):
     today_count: int
     overdue_count: int
     reminder_count: int
+
+
+class SmartScheduleRequest(BaseModel):
+    range_start: date
+    range_end: date
+    workday_start_hour: int = Field(default=9, ge=0, le=22)
+    workday_end_hour: int = Field(default=18, ge=1, le=23)
+    slot_minutes: int = Field(default=30, ge=15, le=120)
+    break_minutes: int = Field(default=15, ge=0, le=60)
+    max_items: int = Field(default=8, ge=1, le=20)
+    include_weekends: bool = False
+    timezone_offset_minutes: int = Field(default=0, ge=-840, le=840)
+
+    @model_validator(mode="after")
+    def validate_range_and_hours(self):
+        if self.range_end < self.range_start:
+            raise ValueError("Range end cannot be before range start.")
+        if (self.range_end - self.range_start).days > 30:
+            raise ValueError("Smart scheduling range cannot exceed 31 days.")
+        if self.workday_end_hour <= self.workday_start_hour:
+            raise ValueError("Workday end must be after workday start.")
+        return self
+
+
+class SmartScheduleSuggestion(BaseModel):
+    task_id: int
+    task_title: str
+    start_at: datetime
+    end_at: datetime
+    duration_minutes: int
+    score: int
+    priority_label: str
+    energy_level: str
+    due_at: datetime | None = None
+    reason: str
+    warning: str | None = None
+
+
+class SmartScheduleResponse(BaseModel):
+    suggestions: list[SmartScheduleSuggestion]
+    unscheduled_task_count: int
+    scheduled_minutes: int
+    remaining_task_count: int
+    explanation: str
+
+
+class SmartScheduleApplyRequest(BaseModel):
+    suggestions: list[SmartScheduleSuggestion] = Field(min_length=1, max_length=20)
+
+
+class SmartScheduleApplyResponse(BaseModel):
+    created_events: list[ScheduleEventResponse]
+    created_count: int
+    skipped_count: int
