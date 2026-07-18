@@ -79,6 +79,7 @@ import type {
 } from "@/types/focus";
 
 import type { PersonalPatternsWorkspace } from "@/types/personal-patterns";
+import type { RecommendationWorkspace } from "@/types/recommendation";
 
 import type {
   ScheduleEvent,
@@ -795,4 +796,9 @@ export function deleteGoal(goalId: number) { return apiRequest<void>(`/api/goals
 
 export function getPersonalPatterns(days = 90) {
   return apiRequest<PersonalPatternsWorkspace>(`/api/personal-patterns/workspace?days=${days}`, { method: "GET" });
+}
+
+
+export function getRecommendationWorkspace(horizonDays = 7) {
+  return apiRequest<RecommendationWorkspace>(`/api/recommendations/workspace?horizon_days=${horizonDays}`, { method: "GET" });
 }

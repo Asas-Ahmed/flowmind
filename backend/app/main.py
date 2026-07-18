@@ -47,6 +47,7 @@ from app.api.deep_work import router as deep_work_router
 from app.api.productivity_heatmap import router as productivity_heatmap_router
 from app.api.goals import router as goals_router
 from app.api.personal_patterns import router as personal_patterns_router
+from app.api.recommendations import router as recommendations_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -90,6 +91,7 @@ app.include_router(deep_work_router)
 app.include_router(productivity_heatmap_router)
 app.include_router(goals_router)
 app.include_router(personal_patterns_router)
+app.include_router(recommendations_router)
 
 @app.get("/")
 def root():

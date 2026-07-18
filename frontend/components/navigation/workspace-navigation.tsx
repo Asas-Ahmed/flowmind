@@ -108,6 +108,12 @@ const navigationItems: NavigationItem[] = [
     icon: Brain,
   },
   {
+    label: "Recommendation Engine",
+    mobileLabel: "Recommendations",
+    href: "/recommendations",
+    icon: BrainCircuit,
+  },
+  {
     label: "Personal Patterns",
     href: "/personal-patterns",
     icon: ChartNoAxesCombined,
@@ -210,13 +216,6 @@ const navigationItems: NavigationItem[] = [
   {
     label: "Analytics",
     icon: BarChart3,
-    comingSoon: true,
-  },
-  {
-    label: "Flow Assistant",
-    mobileLabel: "Assistant",
-    icon: Brain,
-    mobile: true,
     comingSoon: true,
   },
   {
