@@ -21,6 +21,7 @@ from app.models.cognitive_load import CognitiveLoadEntry
 from app.models.if_then_plan import IfThenPlan
 from app.models.distraction_log import DistractionLog
 from app.models.procrastination_starter import ProcrastinationStarter
+from app.models.productivity_experiment import ProductivityExperiment, ProductivityExperimentTrial
 from app.api.dashboard import router as dashboard_router
 from app.api.productivity import router as productivity_router
 from app.api.movement import router as movement_router
@@ -30,6 +31,7 @@ from app.api.cognitive_load import router as cognitive_load_router
 from app.api.if_then import router as if_then_router
 from app.api.distractions import router as distractions_router
 from app.api.procrastination import router as procrastination_router
+from app.api.experiments import router as experiments_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -61,6 +63,7 @@ app.include_router(cognitive_load_router)
 app.include_router(if_then_router)
 app.include_router(distractions_router)
 app.include_router(procrastination_router)
+app.include_router(experiments_router)
 
 @app.get("/")
 def root():

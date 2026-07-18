@@ -1,3 +1,9 @@
+import type {
+  ExperimentPayload,
+  ExperimentTrialPayload,
+  ExperimentWorkspace,
+  ProductivityExperiment,
+} from "@/types/experiment";
 import type { DashboardData } from "@/types/dashboard";
 import type {
   ProcrastinationStarter,
@@ -585,4 +591,31 @@ export function toggleProcrastinationStarter(starterId: number) {
 
 export function deleteProcrastinationStarter(starterId: number) {
   return apiRequest<void>(`/api/procrastination/starters/${starterId}`, { method: "DELETE" });
+}
+
+
+export function getExperimentWorkspace() {
+  return apiRequest<ExperimentWorkspace>("/api/experiments/workspace", { method: "GET" });
+}
+
+export function createProductivityExperiment(payload: ExperimentPayload) {
+  return apiRequest<ProductivityExperiment>("/api/experiments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function recordProductivityExperimentTrial(experimentId: number, payload: ExperimentTrialPayload) {
+  return apiRequest<ProductivityExperiment>(`/api/experiments/${experimentId}/trials`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function completeProductivityExperiment(experimentId: number) {
+  return apiRequest<ProductivityExperiment>(`/api/experiments/${experimentId}/complete`, { method: "PATCH" });
+}
+
+export function deleteProductivityExperiment(experimentId: number) {
+  return apiRequest<void>(`/api/experiments/${experimentId}`, { method: "DELETE" });
 }

@@ -12,6 +12,7 @@ import {
   Flame,
   GitBranchPlus,
   Eye,
+  FlaskConical,
   LayoutDashboard,
   ListTodo,
   MoreHorizontal,
@@ -115,6 +116,11 @@ const navigationItems: NavigationItem[] = [
     icon: Footprints,
   },
   {
+    label: "Experiments",
+    href: "/experiments",
+    icon: FlaskConical,
+  },
+  {
     label: "Eye Care",
     href: "/eye-care",
     icon: Eye,
@@ -170,7 +176,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
