@@ -1,3 +1,11 @@
+import type {
+  ManualTimeEntryPayload,
+  TimeEntry,
+  TimeEntryUpdatePayload,
+  TimeProject,
+  TimeTrackingWorkspace,
+  TimerStartPayload,
+} from "@/types/time-tracking";
 import type { RecoveryBreak, RecoveryBreakPayload, RecoveryWorkspace } from "@/types/recovery";
 import type { NourishmentLog, NourishmentLogPayload, NourishmentWorkspace } from "@/types/nourishment";
 import type { BurnoutWorkspace } from "@/types/burnout";
@@ -676,4 +684,45 @@ export function createRecoveryBreak(payload: RecoveryBreakPayload) {
 
 export function deleteRecoveryBreak(breakId: number) {
   return apiRequest<void>(`/api/recovery/breaks/${breakId}`, { method: "DELETE" });
+}
+
+
+export function getTimeTrackingWorkspace() {
+  return apiRequest<TimeTrackingWorkspace>("/api/time-tracking/workspace", { method: "GET" });
+}
+
+export function createTimeProject(payload: { name: string; color: string }) {
+  return apiRequest<TimeProject>("/api/time-tracking/projects", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function startTimeTracker(payload: TimerStartPayload) {
+  return apiRequest<TimeEntry>("/api/time-tracking/timer/start", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function stopTimeTracker() {
+  return apiRequest<TimeEntry>("/api/time-tracking/timer/stop", { method: "POST" });
+}
+
+export function createManualTimeEntry(payload: ManualTimeEntryPayload) {
+  return apiRequest<TimeEntry>("/api/time-tracking/entries", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTimeEntry(entryId: number, payload: TimeEntryUpdatePayload) {
+  return apiRequest<TimeEntry>(`/api/time-tracking/entries/${entryId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTimeEntry(entryId: number) {
+  return apiRequest<void>(`/api/time-tracking/entries/${entryId}`, { method: "DELETE" });
 }

@@ -7,6 +7,7 @@ import {
   Gauge,
   Brain,
   CalendarDays,
+  Clock3,
   BellOff,
   BrainCircuit,
   Flame,
@@ -77,6 +78,11 @@ const navigationItems: NavigationItem[] = [
     href: "/focus",
     icon: Timer,
     mobile: true,
+  },
+  {
+    label: "Time Tracking",
+    href: "/time-tracking",
+    icon: Clock3,
   },
   {
     label: "Schedule",
@@ -194,7 +200,7 @@ export function WorkspaceNavigation({
       .map((label) => navigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
     const moreItems = navigationItems.filter((item) =>
-      ["Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
+      ["Time Tracking", "Schedule", "Movement", "Energy Check-In", "Sleep", "Cognitive Load", "If–Then Planner", "Distraction Log", "Start Small", "Experiments", "Workload Warning", "Hydration & Meals", "Recovery Breaks", "Eye Care", "Productivity", "Analytics", "Flow Assistant", "Settings"].includes(
         item.label,
       ),
     );
