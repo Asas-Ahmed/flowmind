@@ -221,8 +221,8 @@ const navigationItems: NavigationItem[] = [
   },
   {
     label: "Analytics",
+    href: "/analytics",
     icon: BarChart3,
-    comingSoon: true,
   },
   {
     label: "Settings",
