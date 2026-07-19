@@ -1,3 +1,4 @@
+import type { LifeBalanceCheckIn, LifeBalanceCheckInPayload, LifeBalanceWorkspace } from "@/types/life-balance";
 import type { Goal, GoalPayload, GoalsWorkspace } from "@/types/goals";
 import type { ProductivityHeatmapWorkspace } from "@/types/productivity-heatmap";
 import type { DeepWorkWorkspace } from "@/types/deep-work";
@@ -813,4 +814,17 @@ export function getPersonalPatterns(days = 90) {
 
 export function getRecommendationWorkspace(horizonDays = 7) {
   return apiRequest<RecommendationWorkspace>(`/api/recommendations/workspace?horizon_days=${horizonDays}`, { method: "GET" });
+}
+
+
+export function getLifeBalanceWorkspace() {
+  return apiRequest<LifeBalanceWorkspace>("/api/life-balance/workspace", { method: "GET" });
+}
+
+export function saveLifeBalanceCheckIn(payload: LifeBalanceCheckInPayload) {
+  return apiRequest<LifeBalanceCheckIn>("/api/life-balance/check-ins", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function deleteLifeBalanceCheckIn(checkinId: number) {
+  return apiRequest<void>(`/api/life-balance/check-ins/${checkinId}`, { method: "DELETE" });
 }
