@@ -157,7 +157,7 @@ export function TimeBudgetShell() {
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#070b17] dark:text-white">
       <WorkspaceSidebar />
 
-      <div className="lg:pl-72">
+      <div className="min-w-0 xl:pl-[272px]">
         <WorkspaceTopbar
           eyebrow="Planning & balance"
           title="Time Budget"
@@ -313,7 +313,7 @@ export function TimeBudgetShell() {
         </main>
       </div>
 
-      <div className="lg:hidden"><WorkspaceNavigation variant="mobile" /></div>
+      <div className="xl:hidden"><WorkspaceNavigation variant="mobile" /></div>
     </div>
   );
 }
