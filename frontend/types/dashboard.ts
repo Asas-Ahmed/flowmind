@@ -45,6 +45,8 @@ export type DashboardData = {
   generated_at: string;
   productivity_score: number;
   score_change: number;
+  active_tasks: number;
+  active_habits: number;
   tasks_due_today: number;
   overdue_tasks: number;
   completed_today: number;

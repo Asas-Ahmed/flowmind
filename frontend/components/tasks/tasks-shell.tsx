@@ -185,6 +185,15 @@ export function TasksShell() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [organizerOpen, setOrganizerOpen] = useState(false);
 
+  const refreshTaskRisks = async () => {
+    const riskData = await getTaskRiskWorkspace();
+    setTaskRisks(
+      Object.fromEntries(
+        riskData.predictions.map((prediction) => [prediction.task_id, prediction]),
+      ),
+    );
+  };
+
   useEffect(() => {
     let cancelled = false;
     const stored = window.localStorage.getItem("flowmind_task_favorites");
@@ -368,6 +377,7 @@ export function TasksShell() {
         const created = await createTask(payload);
         setTasks((current) => [created, ...current]);
       }
+      await refreshTaskRisks();
       setModalOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save task");
@@ -380,6 +390,7 @@ export function TasksShell() {
     try {
       const updated = await updateTask(taskId, payload);
       setTasks((current) => current.map((task) => (task.id === taskId ? updated : task)));
+      await refreshTaskRisks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to update task");
     }
@@ -391,6 +402,7 @@ export function TasksShell() {
       await deleteTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
       setFavoriteIds((current) => current.filter((id) => id !== taskId));
+      await refreshTaskRisks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete task");
     }
@@ -419,6 +431,7 @@ export function TasksShell() {
     try {
       const created = await createTask(payload);
       setTasks((current) => [created, ...current]);
+      await refreshTaskRisks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to duplicate task");
     }

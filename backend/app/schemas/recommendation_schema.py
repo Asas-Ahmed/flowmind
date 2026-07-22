@@ -22,7 +22,7 @@ class ProductivityRecommendation(BaseModel):
     category: str
     priority: Literal["high", "medium", "low"]
     confidence: Literal["high", "medium", "early"]
-    impact: Literal["focus", "planning", "wellbeing", "consistency"]
+    impact: Literal["focus", "planning", "wellbeing", "consistency", "completion-risk"]
     evidence: list[RecommendationEvidence]
     action: RecommendationAction
 

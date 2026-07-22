@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 class TaskRiskPrediction(BaseModel):
     task_id: int
+    task_title: str
     completion_probability: float
     risk_probability: float
     risk_level: Literal["low", "medium", "high"]

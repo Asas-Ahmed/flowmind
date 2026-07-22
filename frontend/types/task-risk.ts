@@ -2,6 +2,7 @@ export type TaskRiskLevel = "low" | "medium" | "high";
 
 export type TaskRiskPrediction = {
   task_id: number;
+  task_title: string;
   completion_probability: number;
   risk_probability: number;
   risk_level: TaskRiskLevel;

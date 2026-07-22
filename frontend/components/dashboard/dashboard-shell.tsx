@@ -125,7 +125,7 @@ export function DashboardShell() {
       <motion.main initial={false} animate={{ opacity: isChecking || showLoader ? 0 : 1 }} className="relative min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-slate-50">
         <div className="pointer-events-none fixed inset-0 soft-grid opacity-65" />
         <div className="pointer-events-none fixed left-1/2 top-0 h-80 w-80 -translate-x-1/2 rounded-full bg-cyan-400/15 blur-3xl" />
-        <WorkspaceSidebar taskCount={data?.tasks_due_today ?? 0} habitCount={data?.habits_due_today ?? 0} insightTitle="Live Dashboard" insightText="Real activity from tasks, habits, focus sessions, and schedules." />
+        <WorkspaceSidebar taskCount={data?.active_tasks ?? 0} habitCount={data?.active_habits ?? 0} insightTitle="Live Dashboard" insightText="Real activity from tasks, habits, focus sessions, and schedules." />
 
         <div className="relative min-h-screen xl:pl-[272px]">
           <WorkspaceTopbar
@@ -185,7 +185,7 @@ export function DashboardShell() {
                     </div>
                     <h3 className="mt-4 text-lg font-bold">Completion-risk overview</h3>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      Live predictions from your trained FlowMind model.
+                      FlowMind checks workload, timing, focus, habits, and wellbeing signals to help you act before a task becomes difficult to finish.
                     </p>
                   </div>
                   <div className="rounded-2xl bg-rose-50 p-3 text-rose-600 dark:bg-rose-400/10 dark:text-rose-300">
@@ -216,7 +216,7 @@ export function DashboardShell() {
 
                     <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.045]">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold">Task #{highestRiskPrediction.task_id}</p>
+                        <p className="truncate font-semibold">{highestRiskPrediction.task_title}</p>
                         <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
                           {highestRiskPrediction.risk_level} risk
                         </span>
@@ -250,7 +250,7 @@ export function DashboardShell() {
               <article className={`${card} p-6`}><div className="flex items-center gap-3"><div className="rounded-2xl bg-amber-50 p-3 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300"><AlertTriangle className="h-5 w-5" /></div><div><h3 className="font-bold">Attention needed</h3><p className="text-sm text-slate-500">{data?.overdue_tasks ?? 0} overdue tasks</p></div></div><button onClick={() => router.push("/tasks")} className="mt-5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10">Review backlog</button></article>
             </aside>
           </div>
-          <WorkspaceNavigation variant="mobile" counts={{ tasks: data?.tasks_due_today ?? 0, habits: data?.habits_due_today ?? 0 }} />
+          <WorkspaceNavigation variant="mobile" counts={{ tasks: data?.active_tasks ?? 0, habits: data?.active_habits ?? 0 }} />
         </div>
       </motion.main>
     </>

@@ -56,6 +56,8 @@ class DashboardResponse(BaseModel):
     generated_at: datetime
     productivity_score: int
     score_change: int
+    active_tasks: int
+    active_habits: int
     tasks_due_today: int
     overdue_tasks: int
     completed_today: int

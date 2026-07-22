@@ -14,6 +14,7 @@ from app.models.user_profile import UserProfile
 from app.repositories.schedule_repo import get_event, list_events
 from app.repositories.task_repo import get_task
 from app.schemas.schedule_schema import ScheduleEventCreate, ScheduleEventUpdate
+from app.services.task_risk_service import predict_open_tasks
 
 
 def _day_start(value: date) -> datetime:
@@ -344,7 +345,18 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
         task for task in tasks
         if task.id not in linked_task_ids and task.start_at is None
     ]
-    candidates.sort(key=lambda task: (-_priority_score(task, now), task.due_at or end_dt))
+    try:
+        risk_workspace = predict_open_tasks(db, user.id)
+        risk_by_task = {item.task_id: item for item in risk_workspace.predictions}
+    except Exception:
+        risk_by_task = {}
+
+    def _adaptive_score(task: Task) -> int:
+        prediction = risk_by_task.get(task.id)
+        risk_boost = round(prediction.risk_probability * 40) if prediction else 0
+        return _priority_score(task, now) + risk_boost
+
+    candidates.sort(key=lambda task: (-_adaptive_score(task), task.due_at or end_dt))
 
     busy: list[tuple[datetime, datetime]] = [(event.start_at, event.end_at) for event in existing_events]
     for task in tasks:
@@ -412,7 +424,8 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
                 if task.due_at and cursor > task.due_at:
                     break
                 if not _overlaps(cursor, candidate_end, busy):
-                    score = _priority_score(task, now)
+                    score = _adaptive_score(task)
+                    prediction = risk_by_task.get(task.id)
                     due_text = "No deadline set"
                     warning = None
                     if task.due_at:
@@ -438,7 +451,10 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
                             "priority_label": priority_label,
                             "energy_level": task.energy_level,
                             "due_at": task.due_at,
-                            "reason": f"{priority_label}; {due_text}; matched to a {task.energy_level}-energy {duration}-minute block.",
+                            "reason": (
+                                f"{priority_label}; {due_text}; matched to a {task.energy_level}-energy {duration}-minute block"
+                                + (f"; AI completion risk {round(prediction.risk_probability * 100)}%." if prediction else ".")
+                            ),
                             "warning": warning,
                         }
                     )
@@ -454,7 +470,7 @@ def generate_smart_schedule(db: Session, user: User, data) -> dict:
     if not candidates:
         explanation = "All unfinished tasks are already scheduled or there are no open tasks."
     elif suggestions:
-        explanation = "Suggestions are ranked by deadline pressure, Eisenhower priority, task status, energy demand, and conflict-free availability."
+        explanation = "Suggestions combine the trained task-risk forecast with deadline pressure, Eisenhower priority, task status, energy demand, and conflict-free availability."
     else:
         explanation = "No conflict-free slots were found inside the selected work hours. Expand the date range or workday window."
 

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User
 from app.services.weekly_review_service import get_weekly_review
+from app.services.task_risk_service import predict_open_tasks
 
 
 def _metric(review: dict, label: str) -> dict:
@@ -14,6 +15,12 @@ def get_weekly_coach(db: Session, current_user: User, *, week_offset: int = 0):
     focus = _metric(review, "Focus time")
     tracked = _metric(review, "Tracked time")
     habits = _metric(review, "Habit completions")
+    try:
+        risk_workspace = predict_open_tasks(db, current_user.id)
+        highest_risk = risk_workspace.predictions[0] if risk_workspace.predictions else None
+    except Exception:
+        risk_workspace = None
+        highest_risk = None
 
     available_signals = sum(
         [
@@ -49,6 +56,13 @@ def get_weekly_coach(db: Session, current_user: User, *, week_offset: int = 0):
         friction.append({"title": "Recovery may be constraining output", "detail": f"Average sleep was {review['average_sleep_hours']} hours.", "evidence": "Sleep records", "tone": "wellbeing"})
     if review["average_energy"] is not None and review["average_energy"] < 3:
         friction.append({"title": "Low energy signal", "detail": f"Average reported energy was {review['average_energy']}/5.", "evidence": "Energy check-ins", "tone": "wellbeing"})
+    if highest_risk and highest_risk.risk_level == "high":
+        friction.insert(0, {
+            "title": "A task needs early intervention",
+            "detail": f"{highest_risk.task_title} currently has {round(highest_risk.risk_probability * 100)}% predicted completion risk.",
+            "evidence": "FlowMind V4 task-risk model",
+            "tone": "warning",
+        })
     if not friction:
         friction.append({"title": "No dominant friction detected", "detail": "The available signals do not show one major recurring blocker this week.", "evidence": "Cross-feature comparison", "tone": "neutral"})
 
@@ -61,6 +75,14 @@ def get_weekly_coach(db: Session, current_user: User, *, week_offset: int = 0):
         actions.append({"title": "Use three repeatable focus anchors", "detail": "Schedule three manageable sessions rather than relying on one long catch-up block.", "priority": "Medium", "action_label": "Start focus", "action_href": "/focus"})
     if habits["value"] < 5:
         actions.append({"title": "Reduce habit ambition", "detail": "Choose one small habit that directly supports your most important weekly goal.", "priority": "Medium", "action_label": "Open habits", "action_href": "/habits"})
+    if highest_risk and highest_risk.risk_level in {"high", "medium"}:
+        actions.insert(0, {
+            "title": f"Protect {highest_risk.task_title}",
+            "detail": highest_risk.recommended_action,
+            "priority": "High" if highest_risk.risk_level == "high" else "Medium",
+            "action_label": "Review AI forecast",
+            "action_href": "/tasks",
+        })
     if len(actions) < 3:
         actions.append({"title": "Repeat the best day structure", "detail": f"Reuse the sequence that worked on {review['best_day'] or 'your strongest day'} for one demanding day next week.", "priority": "Low", "action_label": "View weekly review", "action_href": "/weekly-review"})
 
@@ -90,7 +112,7 @@ def get_weekly_coach(db: Session, current_user: User, *, week_offset: int = 0):
         f"Your weekly score was {review['score']}/100. "
         f"The strongest visible pattern was {review['best_day'] or 'still emerging'}, "
         f"while {review['biggest_distraction'].lower() if review['biggest_distraction'] else 'no single distraction'} was the clearest friction signal. "
-        "The recommendations below are generated from your own FlowMind records and remain fully explainable."
+        "The guidance below combines your recorded activity with explainable trained task-risk forecasts when active tasks are available."
     )
 
     return {

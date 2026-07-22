@@ -13,6 +13,7 @@ from app.models.schedule_event import ScheduleEvent
 from app.models.sleep_record import SleepRecord
 from app.models.task import Task
 from app.models.user import User
+from app.services.task_risk_service import predict_open_tasks
 
 _PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 
@@ -129,6 +130,31 @@ def build_recommendation_workspace(
     )
 
     recommendations: list[dict] = []
+
+    try:
+        risk_workspace = predict_open_tasks(db, current_user.id)
+        highest_risk = risk_workspace.predictions[0] if risk_workspace.predictions else None
+    except Exception:
+        risk_workspace = None
+        highest_risk = None
+
+    if highest_risk and highest_risk.risk_level in {"high", "medium"}:
+        recommendations.append(_recommendation(
+            recommendation_id="ml-task-risk",
+            title=f"Protect: {highest_risk.task_title}",
+            message=highest_risk.recommended_action,
+            reason="The trained FlowMind model combined task pressure with your recent focus, habit, workload, and wellbeing signals.",
+            category="AI task forecast",
+            priority="high" if highest_risk.risk_level == "high" else "medium",
+            confidence="high",
+            impact="completion-risk",
+            evidence=[
+                {"label": "Predicted risk", "value": f"{round(highest_risk.risk_probability * 100)}%"},
+                {"label": "Main factor", "value": highest_risk.important_factors[0] if highest_risk.important_factors else "Combined signals"},
+            ],
+            action_label="Review task forecast",
+            action_href="/tasks",
+        ))
 
     overdue = [task for task in open_tasks if task.due_at and task.due_at < now]
     due_soon = [task for task in open_tasks if task.due_at and now <= task.due_at <= upcoming_end]
@@ -357,11 +383,11 @@ def build_recommendation_workspace(
         "generated_at": now,
         "horizon_days": horizon_days,
         "headline": headline,
-        "summary": f"FlowMind combined {signals} recent signals across {connected_modules} connected modules to create explainable, actionable guidance.",
+        "summary": f"FlowMind combined {signals} recent signals across {connected_modules} connected modules, including trained task-risk forecasts when active tasks were available.",
         "readiness_score": readiness_score,
         "signals_analyzed": signals,
         "high_priority_count": high_priority_count,
         "recommendations": recommendations,
         "data_gaps": data_gaps,
-        "disclaimer": "Recommendations are rule-based productivity guidance derived from your FlowMind records. They are not medical, psychological, or professional advice.",
+        "disclaimer": "Guidance combines explainable rules with trained task-completion-risk predictions. It supports planning and is not medical, psychological, or professional advice.",
     }

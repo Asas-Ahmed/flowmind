@@ -79,7 +79,9 @@ def get_dashboard(db: Session, user: User) -> dict:
     profile = db.scalar(select(UserProfile).where(UserProfile.user_id == user.id))
     focus_goal = profile.daily_focus_goal_minutes if profile else 120
 
-    due_today = [task for task in tasks if task.due_at and today_start <= task.due_at < tomorrow_start and task.status != "completed"]
+    active_tasks = [task for task in tasks if task.status != "completed"]
+    active_habits = habits
+    due_today = [task for task in active_tasks if task.due_at and today_start <= task.due_at < tomorrow_start]
     overdue = [task for task in tasks if task.due_at and task.due_at < today_start and task.status != "completed"]
     completed_today = [task for task in tasks if task.completed_at and today_start <= task.completed_at < tomorrow_start]
     created_or_due_today = [task for task in tasks if (task.due_at and today_start <= task.due_at < tomorrow_start) or (today_start <= task.created_at < tomorrow_start)]
@@ -161,6 +163,8 @@ def get_dashboard(db: Session, user: User) -> dict:
         "generated_at": datetime.now(timezone.utc),
         "productivity_score": productivity_score,
         "score_change": score_change,
+        "active_tasks": len(active_tasks),
+        "active_habits": len(active_habits),
         "tasks_due_today": len(due_today),
         "overdue_tasks": len(overdue),
         "completed_today": len(completed_today),

@@ -194,6 +194,7 @@ def predict_task(db: Session, user_id: int, task_id: int, context: dict | None =
     reasons, action = explain_prediction(feature_values, prediction.risk_level)
     return TaskRiskPrediction(
         task_id=task.id,
+        task_title=task.title,
         completion_probability=round(prediction.completion_probability, 4),
         risk_probability=round(prediction.risk_probability, 4),
         risk_level=prediction.risk_level,

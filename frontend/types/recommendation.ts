@@ -1,6 +1,6 @@
 export type RecommendationPriority = "high" | "medium" | "low";
 export type RecommendationConfidence = "high" | "medium" | "early";
-export type RecommendationImpact = "focus" | "planning" | "wellbeing" | "consistency";
+export type RecommendationImpact = "focus" | "planning" | "wellbeing" | "consistency" | "completion-risk";
 
 export type RecommendationEvidence = {
   label: string;
