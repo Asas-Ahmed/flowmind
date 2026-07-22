@@ -41,7 +41,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
 
@@ -171,16 +171,19 @@ function DesktopNavigationItem({
   active,
   count,
   onNavigate,
+  activeItemRef,
 }: {
   item: NavigationItem;
   active: boolean;
   count?: number;
   onNavigate: (href: string) => void;
+  activeItemRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const Icon = item.icon;
 
   return (
     <button
+      ref={active ? activeItemRef : undefined}
       type="button"
       onClick={() => onNavigate(item.href)}
       aria-current={active ? "page" : undefined}
@@ -227,6 +230,7 @@ export function WorkspaceNavigation({
   const pathname = usePathname();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const activeDesktopItemRef = useRef<HTMLButtonElement>(null);
 
   const activeGroupId = useMemo(
     () => navigationGroups.find((group) => group.items.some((item) => isActiveRoute(pathname, item.href)))?.id,
@@ -236,6 +240,45 @@ export function WorkspaceNavigation({
   const [openGroups, setOpenGroups] = useState<NavigationGroupId[]>(() =>
     activeGroupId && !["core", "system"].includes(activeGroupId) ? [activeGroupId] : [],
   );
+
+  useEffect(() => {
+    if (variant !== "desktop") return;
+
+    const scrollActiveItemIntoView = () => {
+      const activeItem = activeDesktopItemRef.current;
+      const scrollContainer = activeItem?.closest<HTMLElement>(".workspace-sidebar-scroll");
+
+      if (!activeItem || !scrollContainer) return;
+
+      const itemRect = activeItem.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const safeTop = containerRect.top + 20;
+      const safeBottom = containerRect.bottom - 20;
+
+      if (itemRect.top < safeTop || itemRect.bottom > safeBottom) {
+        const nextScrollTop =
+          scrollContainer.scrollTop +
+          itemRect.top -
+          containerRect.top -
+          (scrollContainer.clientHeight - itemRect.height) / 2;
+
+        scrollContainer.scrollTo({
+          top: Math.max(0, nextScrollTop),
+          behavior: "smooth",
+        });
+      }
+    };
+
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(scrollActiveItemIntoView);
+    });
+    const animationTimer = window.setTimeout(scrollActiveItemIntoView, 240);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(animationTimer);
+    };
+  }, [activeGroupId, pathname, variant]);
 
   const navigateTo = (href: string) => {
     setMoreOpen(false);
@@ -399,7 +442,7 @@ export function WorkspaceNavigation({
                     <motion.div initial={group.collapsible ? { height: 0, opacity: 0 } : false} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }} className="overflow-hidden">
                       <div className={`${group.collapsible ? "mt-1 space-y-1" : "space-y-1"}`}>
                         {group.items.map((item) => (
-                          <DesktopNavigationItem key={item.label} item={item} active={isActiveRoute(pathname, item.href)} count={item.countKey ? counts[item.countKey] : undefined} onNavigate={router.push} />
+                          <DesktopNavigationItem key={item.label} item={item} active={isActiveRoute(pathname, item.href)} count={item.countKey ? counts[item.countKey] : undefined} onNavigate={router.push} activeItemRef={activeDesktopItemRef} />
                         ))}
                       </div>
                     </motion.div>
