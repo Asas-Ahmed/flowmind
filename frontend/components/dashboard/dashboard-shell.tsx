@@ -23,8 +23,9 @@ import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
 import { DashboardLoader } from "./dashboard-loader";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
-import { getDashboardData } from "@/lib/api";
+import { getDashboardData, getTaskRiskWorkspace } from "@/lib/api";
 import type { DashboardData } from "@/types/dashboard";
+import type { TaskRiskWorkspace } from "@/types/task-risk";
 
 const LOADER_KEY = "flowmind-dashboard-loader-seen";
 const card = "rounded-[2rem] border border-slate-200/80 bg-white/80 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.055] dark:shadow-black/20";
@@ -44,19 +45,43 @@ export function DashboardShell() {
   const [isChecking, setIsChecking] = useState(true);
   const [showLoader, setShowLoader] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
+  const [taskRisk, setTaskRisk] = useState<TaskRiskWorkspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [riskError, setRiskError] = useState("");
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setError("");
-    try {
-      setData(await getDashboardData());
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Could not load dashboard data.");
-    } finally {
-      setLoading(false);
+    setRiskError("");
+
+    const [dashboardResult, riskResult] = await Promise.allSettled([
+      getDashboardData(),
+      getTaskRiskWorkspace(),
+    ]);
+
+    if (dashboardResult.status === "fulfilled") {
+      setData(dashboardResult.value);
+    } else {
+      setError(
+        dashboardResult.reason instanceof Error
+          ? dashboardResult.reason.message
+          : "Could not load dashboard data.",
+      );
     }
+
+    if (riskResult.status === "fulfilled") {
+      setTaskRisk(riskResult.value);
+    } else {
+      setTaskRisk(null);
+      setRiskError(
+        riskResult.reason instanceof Error
+          ? riskResult.reason.message
+          : "AI task-risk predictions are temporarily unavailable.",
+      );
+    }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -72,6 +97,17 @@ export function DashboardShell() {
 
     return () => window.cancelAnimationFrame(frame);
   }, [loadDashboard]);
+
+
+  const highestRiskPrediction = useMemo(() => {
+    if (!taskRisk?.predictions.length) return null;
+
+    return taskRisk.predictions.reduce((highest, prediction) =>
+      prediction.risk_probability > highest.risk_probability
+        ? prediction
+        : highest,
+    );
+  }, [taskRisk]);
 
   const stats = useMemo(() => {
     if (!data) return [];
@@ -140,6 +176,76 @@ export function DashboardShell() {
             </div>
 
             <aside className="space-y-6">
+              <article className={`${card} overflow-hidden p-6`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-fuchsia-200 bg-fuchsia-50 px-3 py-1 text-xs font-semibold text-fuchsia-700 dark:border-fuchsia-400/20 dark:bg-fuchsia-400/10 dark:text-fuchsia-200">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      V4 AI task forecast
+                    </div>
+                    <h3 className="mt-4 text-lg font-bold">Completion-risk overview</h3>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Live predictions from your trained FlowMind model.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-rose-50 p-3 text-rose-600 dark:bg-rose-400/10 dark:text-rose-300">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                </div>
+
+                {riskError ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                    {riskError}
+                  </div>
+                ) : highestRiskPrediction ? (
+                  <>
+                    <div className="mt-5 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl border border-slate-200/80 p-4 dark:border-white/10">
+                        <p className="text-xs text-slate-500">High-risk tasks</p>
+                        <p className="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-300">
+                          {taskRisk?.high_risk_count ?? 0}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200/80 p-4 dark:border-white/10">
+                        <p className="text-xs text-slate-500">Highest predicted risk</p>
+                        <p className="mt-1 text-2xl font-bold">
+                          {Math.round(highestRiskPrediction.risk_probability * 100)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl bg-slate-50 p-4 dark:bg-white/[0.045]">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-semibold">Task #{highestRiskPrediction.task_id}</p>
+                        <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
+                          {highestRiskPrediction.risk_level} risk
+                        </span>
+                      </div>
+                      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Main reason</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {highestRiskPrediction.important_factors[0] ?? "Multiple workload and timing signals increased this task's risk."}
+                      </p>
+                      <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Recommended action</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                        {highestRiskPrediction.recommended_action}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push("/tasks")}
+                      className="mt-5 w-full rounded-2xl aurora-gradient px-4 py-3 text-sm font-semibold text-white shadow-lg"
+                    >
+                      Review AI task predictions
+                    </button>
+                  </>
+                ) : (
+                  <div className="mt-5">
+                    <Empty text="Create an active task to generate your first AI completion forecast." />
+                  </div>
+                )}
+              </article>
+
               <article className={`${card} p-6`}><h3 className="text-lg font-bold">Performance balance</h3><p className="mt-1 text-sm text-slate-500">How each area contributes today</p><div className="mt-6 space-y-5"><Rate label="Task completion" value={data?.task_completion_rate ?? 0} icon={CheckCircle2} /><Rate label="Habit consistency" value={data?.habit_completion_rate ?? 0} icon={Flame} /><Rate label="Focus goal" value={data?.focus_goal_rate ?? 0} icon={Focus} /></div></article>
               <article className={`${card} p-6`}><div className="flex items-center gap-3"><div className="rounded-2xl bg-amber-50 p-3 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300"><AlertTriangle className="h-5 w-5" /></div><div><h3 className="font-bold">Attention needed</h3><p className="text-sm text-slate-500">{data?.overdue_tasks ?? 0} overdue tasks</p></div></div><button onClick={() => router.push("/tasks")} className="mt-5 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold dark:border-white/10">Review backlog</button></article>
             </aside>

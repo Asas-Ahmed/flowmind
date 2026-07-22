@@ -59,6 +59,8 @@ import type {
   MovementWorkspace,
 } from "@/types/movement";
 
+import type { TaskRiskPrediction, TaskRiskWorkspace } from "@/types/task-risk";
+
 import type {
   Task,
   TaskCategory,
@@ -316,6 +318,15 @@ export function updateUserProfile(
     body: JSON.stringify(profile),
   });
 }
+
+export function getTaskRiskWorkspace() {
+  return apiRequest<TaskRiskWorkspace>("/api/task-risk/workspace", { method: "GET" });
+}
+
+export function getTaskRiskPrediction(taskId: number) {
+  return apiRequest<TaskRiskPrediction>(`/api/task-risk/${taskId}`, { method: "GET" });
+}
+
 export function getTaskWorkspace() {
   return apiRequest<TaskWorkspace>("/api/tasks/workspace", { method: "GET" });
 }

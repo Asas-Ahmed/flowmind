@@ -52,6 +52,7 @@ from app.api.personal_patterns import router as personal_patterns_router
 from app.api.recommendations import router as recommendations_router
 from app.api.life_balance import router as life_balance_router
 from app.api.habit_breaker import router as habit_breaker_router
+from app.api.task_risk import router as task_risk_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -98,6 +99,7 @@ app.include_router(personal_patterns_router)
 app.include_router(recommendations_router)
 app.include_router(life_balance_router)
 app.include_router(habit_breaker_router)
+app.include_router(task_risk_router)
 
 @app.get("/")
 def root():
