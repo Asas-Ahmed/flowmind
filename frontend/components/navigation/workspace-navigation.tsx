@@ -32,6 +32,7 @@ import {
   Scale,
   Settings,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Target,
   Timer,
@@ -145,6 +146,7 @@ const navigationGroups: NavigationGroup[] = [
     collapsible: true,
     items: [
       { label: "Distraction Log", href: "/distractions", icon: BellOff, description: "Identify interruption patterns" },
+      { label: "Habit Breaker", href: "/habit-breaker", icon: ShieldCheck, description: "Break unwanted habits and track recovery" },
       { label: "Experiments", href: "/experiments", icon: FlaskConical, description: "Test productivity methods" },
     ],
   },

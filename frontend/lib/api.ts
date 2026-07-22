@@ -1,3 +1,4 @@
+import type { HabitBreakerWorkspace, JourneyPayload, QuitJourney } from "@/types/habit-breaker";
 import type { LifeBalanceCheckIn, LifeBalanceCheckInPayload, LifeBalanceWorkspace } from "@/types/life-balance";
 import type { Goal, GoalPayload, GoalsWorkspace } from "@/types/goals";
 import type { ProductivityHeatmapWorkspace } from "@/types/productivity-heatmap";
@@ -828,3 +829,14 @@ export function saveLifeBalanceCheckIn(payload: LifeBalanceCheckInPayload) {
 export function deleteLifeBalanceCheckIn(checkinId: number) {
   return apiRequest<void>(`/api/life-balance/check-ins/${checkinId}`, { method: "DELETE" });
 }
+
+
+export function getHabitBreakerWorkspace() { return apiRequest<HabitBreakerWorkspace>("/api/habit-breaker/workspace", { method: "GET" }); }
+export function createQuitJourney(payload: JourneyPayload) { return apiRequest<QuitJourney>("/api/habit-breaker", { method: "POST", body: JSON.stringify(payload) }); }
+export function updateQuitJourney(id: number, payload: Partial<JourneyPayload & { is_active: boolean }>) { return apiRequest<QuitJourney>(`/api/habit-breaker/${id}`, { method: "PATCH", body: JSON.stringify(payload) }); }
+export function deleteQuitJourney(id: number) { return apiRequest<void>(`/api/habit-breaker/${id}`, { method: "DELETE" }); }
+export function resetQuitJourney(id: number, payload: { note?: string; trigger?: string; reset_at?: string }) { return apiRequest<void>(`/api/habit-breaker/${id}/reset`, { method: "POST", body: JSON.stringify(payload) }); }
+export function addQuitReward(id: number, payload: { title: string; target_days: number; estimated_cost: number }) { return apiRequest(`/api/habit-breaker/${id}/rewards`, { method: "POST", body: JSON.stringify(payload) }); }
+export function updateQuitReward(id: number, payload: { title?: string; target_days?: number; estimated_cost?: number; purchased?: boolean }) { return apiRequest(`/api/habit-breaker/rewards/${id}`, { method: "PATCH", body: JSON.stringify(payload) }); }
+export function toggleQuitReward(id: number, payload: { purchased: boolean }) { return updateQuitReward(id, payload); }
+export function deleteQuitReward(id: number) { return apiRequest<void>(`/api/habit-breaker/rewards/${id}`, { method: "DELETE" }); }
