@@ -44,6 +44,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
+import { useFeaturePreferences } from "@/lib/feature-preferences";
 
 type NavigationCountKey = "tasks" | "habits";
 type NavigationGroupId = "core" | "plan" | "insights" | "wellbeing" | "growth" | "system";
@@ -159,7 +160,6 @@ const navigationGroups: NavigationGroup[] = [
   },
 ];
 
-const allNavigationItems = navigationGroups.flatMap((group) => group.items);
 
 function isActiveRoute(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -230,11 +230,26 @@ export function WorkspaceNavigation({
   const pathname = usePathname();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { isFeatureEnabled } = useFeaturePreferences();
+  const visibleNavigationGroups = useMemo(
+    () =>
+      navigationGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => isFeatureEnabled(item.href)),
+        }))
+        .filter((group) => group.items.length > 0),
+    [isFeatureEnabled],
+  );
+  const visibleNavigationItems = useMemo(
+    () => visibleNavigationGroups.flatMap((group) => group.items),
+    [visibleNavigationGroups],
+  );
   const activeDesktopItemRef = useRef<HTMLButtonElement>(null);
 
   const activeGroupId = useMemo(
-    () => navigationGroups.find((group) => group.items.some((item) => isActiveRoute(pathname, item.href)))?.id,
-    [pathname],
+    () => visibleNavigationGroups.find((group) => group.items.some((item) => isActiveRoute(pathname, item.href)))?.id,
+    [pathname, visibleNavigationGroups],
   );
 
   const [openGroups, setOpenGroups] = useState<NavigationGroupId[]>(() =>
@@ -288,9 +303,9 @@ export function WorkspaceNavigation({
   if (variant === "mobile") {
     const primaryLabels = ["Dashboard", "Tasks", "Habits", "Focus"];
     const primaryItems = primaryLabels
-      .map((label) => allNavigationItems.find((item) => item.label === label))
+      .map((label) => visibleNavigationItems.find((item) => item.label === label))
       .filter((item): item is NavigationItem => Boolean(item));
-    const moreGroups = navigationGroups
+    const moreGroups = visibleNavigationGroups
       .map((group) => ({ ...group, items: group.items.filter((item) => !primaryLabels.includes(item.label)) }))
       .filter((group) => group.items.length > 0);
     const moreActive = moreGroups.some((group) => group.items.some((item) => isActiveRoute(pathname, item.href)));
@@ -415,7 +430,7 @@ export function WorkspaceNavigation({
         </div>
 
         <nav aria-label="Workspace navigation" className="space-y-3">
-          {navigationGroups.map((group) => {
+          {visibleNavigationGroups.map((group) => {
             const GroupIcon = group.icon;
             const groupActive = group.items.some((item) => isActiveRoute(pathname, item.href));
             const isOpen = !group.collapsible || openGroups.includes(group.id) || groupActive;
