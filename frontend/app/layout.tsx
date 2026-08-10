@@ -4,6 +4,7 @@ import { Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { NotificationProvider } from "@/components/notifications/notification-provider";
+import { PwaRegister } from "@/components/pwa/pwa-register";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,8 +39,16 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Asas Ahmed" }],
   creator: "Asas Ahmed",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "FlowMind",
+    statusBarStyle: "black-translucent",
+  },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/brand/favicon.ico",
+    shortcut: "/brand/favicon.ico",
+    apple: "/brand/flowmind-icon-180.png",
   },
 };
 
@@ -47,6 +56,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
     { media: "(prefers-color-scheme: dark)", color: "#050816" },
@@ -70,6 +80,7 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <NotificationProvider>{children}</NotificationProvider>
+          <PwaRegister />
         </ThemeProvider>
       </body>
     </html>
