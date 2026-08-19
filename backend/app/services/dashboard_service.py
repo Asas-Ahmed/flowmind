@@ -18,6 +18,20 @@ def _day_bounds(day: date) -> tuple[datetime, datetime]:
     return start, start + timedelta(days=1)
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Normalize database datetimes for safe Python-side UTC comparisons.
+
+    PostgreSQL preserves timezone information for DateTime(timezone=True), while
+    SQLite may return the same stored value without tzinfo. Treat naive values as
+    UTC because FlowMind stores application datetimes in UTC.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def _is_habit_due(habit: Habit, target: date) -> bool:
     if habit.start_date > target or (habit.end_date and habit.end_date < target):
         return False
@@ -81,15 +95,43 @@ def get_dashboard(db: Session, user: User) -> dict:
 
     active_tasks = [task for task in tasks if task.status != "completed"]
     active_habits = habits
-    due_today = [task for task in active_tasks if task.due_at and today_start <= task.due_at < tomorrow_start]
-    overdue = [task for task in tasks if task.due_at and task.due_at < today_start and task.status != "completed"]
-    completed_today = [task for task in tasks if task.completed_at and today_start <= task.completed_at < tomorrow_start]
-    created_or_due_today = [task for task in tasks if (task.due_at and today_start <= task.due_at < tomorrow_start) or (today_start <= task.created_at < tomorrow_start)]
+    due_today = [
+        task
+        for task in active_tasks
+        if (due_at := _as_utc(task.due_at)) and today_start <= due_at < tomorrow_start
+    ]
+    overdue = [
+        task
+        for task in tasks
+        if (due_at := _as_utc(task.due_at))
+        and due_at < today_start
+        and task.status != "completed"
+    ]
+    completed_today = [
+        task
+        for task in tasks
+        if (completed_at := _as_utc(task.completed_at))
+        and today_start <= completed_at < tomorrow_start
+    ]
+    created_or_due_today = [
+        task
+        for task in tasks
+        if (
+            ((due_at := _as_utc(task.due_at)) and today_start <= due_at < tomorrow_start)
+            or (
+                (created_at := _as_utc(task.created_at))
+                and today_start <= created_at < tomorrow_start
+            )
+        )
+    ]
 
     today_focus = sum(
         session.elapsed_seconds
         for session in sessions
-        if session.mode == "focus" and session.status == "completed" and today_start <= session.started_at < tomorrow_start
+        if session.mode == "focus"
+        and session.status == "completed"
+        and (started_at := _as_utc(session.started_at))
+        and today_start <= started_at < tomorrow_start
     ) // 60
 
     completion_by_habit_date = {(item.habit_id, item.completion_date): item.count for item in completions}
@@ -109,11 +151,18 @@ def get_dashboard(db: Session, user: User) -> dict:
     for offset in range(7):
         day = week_start + timedelta(days=offset)
         start, end = _day_bounds(day)
-        day_tasks = [task for task in tasks if task.completed_at and start <= task.completed_at < end]
+        day_tasks = [
+            task
+            for task in tasks
+            if (completed_at := _as_utc(task.completed_at)) and start <= completed_at < end
+        ]
         day_focus = sum(
             session.elapsed_seconds
             for session in sessions
-            if session.mode == "focus" and session.status == "completed" and start <= session.started_at < end
+            if session.mode == "focus"
+            and session.status == "completed"
+            and (started_at := _as_utc(session.started_at))
+            and start <= started_at < end
         ) // 60
         day_due_habits = [habit for habit in habits if _is_habit_due(habit, day)]
         day_habits = sum(
@@ -135,7 +184,10 @@ def get_dashboard(db: Session, user: User) -> dict:
     priority_order = {"urgent_important": 0, "important_not_urgent": 1, "urgent_not_important": 2, "not_urgent_not_important": 3}
     priority_tasks = sorted(
         [task for task in tasks if task.status != "completed"],
-        key=lambda task: (priority_order.get(task.eisenhower, 9), task.due_at or datetime.max.replace(tzinfo=timezone.utc)),
+        key=lambda task: (
+            priority_order.get(task.eisenhower, 9),
+            _as_utc(task.due_at) or datetime.max.replace(tzinfo=timezone.utc),
+        ),
     )[:5]
 
     habit_items = []

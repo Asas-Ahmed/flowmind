@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "flowmind_access_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6ImFjY2VzcyIsImV4cCI6MTc4NzEyMDA4NX0.jWZEBD1lukT-jZ4xbHluGNse0rMJZTsMYLab2EnsGm4",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1787723085.722,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "flowmind_refresh_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidHlwZSI6InJlZnJlc2giLCJleHAiOjE3ODc3MjMwODV9.YhAsMUaNq_0QQPQ02fnsepPYD7uDot1C7elMfRtTWcg",
+      "domain": "localhost",
+      "path": "/",
+      "expires": 1787723085.722,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}
