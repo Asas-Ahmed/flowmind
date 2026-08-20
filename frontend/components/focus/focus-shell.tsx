@@ -27,6 +27,7 @@ import {
   completeFocusSession,
   deleteFocusSession,
   getFocusWorkspace,
+  getTaskWorkspace,
   pauseFocusSession,
   resumeFocusSession,
   startFocusSession,
@@ -38,6 +39,7 @@ import type {
   FocusSessionPayload,
   FocusWorkspace,
 } from "@/types/focus";
+import type { Task } from "@/types/task";
 
 const PRESETS: Array<{ label: string; minutes: number; mode: FocusMode }> = [
   { label: "Quick", minutes: 15, mode: "focus" },
@@ -109,6 +111,8 @@ export function FocusShell() {
   const [showReflection, setShowReflection] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [taskOptions, setTaskOptions] = useState<Task[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
 
   const activeSession = workspace?.active_session ?? null;
   const totalSeconds = (activeSession?.planned_minutes ?? minutes) * 60;
@@ -164,6 +168,21 @@ export function FocusShell() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    getTaskWorkspace()
+      .then((data) => {
+        if (cancelled) return;
+        setTaskOptions(data.tasks.filter((task) => task.status !== "completed"));
+      })
+      .catch(() => {
+        if (!cancelled) setTaskOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!running || !activeSession) return;
     const interval = window.setInterval(() => {
       setElapsed((current) => current + 1);
@@ -190,7 +209,7 @@ export function FocusShell() {
     setError("");
     const payload: FocusSessionPayload = {
       title: title.trim() || "Focus session",
-      task_id: null,
+      task_id: selectedTaskId,
       mode,
       planned_minutes: minutes,
     };
@@ -379,6 +398,16 @@ export function FocusShell() {
                     {!activeSession ? (
                       <div className="mt-8 w-full space-y-5">
                         <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={160} placeholder="What are you focusing on?" className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-center text-sm font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus:border-blue-400" />
+                        {mode === "focus" && (
+                          <label className="block text-left">
+                            <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Link a task</span>
+                            <select value={selectedTaskId ?? ""} onChange={(event) => setSelectedTaskId(event.target.value ? Number(event.target.value) : null)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm font-semibold outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus:border-blue-400">
+                              <option value="">No linked task</option>
+                              {taskOptions.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}
+                            </select>
+                            <span className="mt-2 block text-xs text-slate-400">Connect deep work to a real task so your focus history and productivity data stay meaningful.</span>
+                          </label>
+                        )}
                         <div className="flex flex-wrap justify-center gap-2">
                           {PRESETS.map((preset) => {
                             const selected = preset.minutes === minutes && preset.mode === mode;

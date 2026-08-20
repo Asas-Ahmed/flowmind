@@ -64,6 +64,7 @@ import type { TaskRiskPrediction } from "@/types/task-risk";
 
 type ViewMode = "list" | "board" | "matrix" | "calendar" | "analytics";
 type SortMode = "due" | "created" | "title" | "status" | "priority";
+type SmartFilter = "all" | "today" | "overdue" | "upcoming" | "no_date";
 
 const blankTask = (): TaskPayload => ({
   title: "",
@@ -172,6 +173,7 @@ export function TasksShell() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
+  const [smartFilter, setSmartFilter] = useState<SmartFilter>("all");
   const [listFilter, setListFilter] = useState<number | "all">("all");
   const [sortMode, setSortMode] = useState<SortMode>("due");
   const [showCompleted, setShowCompleted] = useState(true);
@@ -257,7 +259,18 @@ export function TasksShell() {
         const matchesList = listFilter === "all" || task.list_id === listFilter;
         const matchesCompleted = showCompleted || task.status !== "completed";
         const matchesFavorite = !favoritesOnly || favoriteIds.includes(task.id);
-        return matchesSearch && matchesStatus && matchesList && matchesCompleted && matchesFavorite;
+        const now = new Date();
+        const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const endToday = new Date(startToday);
+        endToday.setDate(endToday.getDate() + 1);
+        const due = task.due_at ? new Date(task.due_at) : null;
+        const matchesSmart =
+          smartFilter === "all" ||
+          (smartFilter === "today" && !!due && due >= startToday && due < endToday && task.status !== "completed") ||
+          (smartFilter === "overdue" && !!due && due < now && task.status !== "completed") ||
+          (smartFilter === "upcoming" && !!due && due >= endToday && task.status !== "completed") ||
+          (smartFilter === "no_date" && !due && task.status !== "completed");
+        return matchesSearch && matchesStatus && matchesList && matchesCompleted && matchesFavorite && matchesSmart;
       })
       .sort((a, b) => {
         if (sortMode === "title") return a.title.localeCompare(b.title);
@@ -268,7 +281,7 @@ export function TasksShell() {
         const bDue = b.due_at ? new Date(b.due_at).getTime() : Number.MAX_SAFE_INTEGER;
         return aDue - bDue;
       });
-  }, [tasks, search, statusFilter, listFilter, showCompleted, favoritesOnly, favoriteIds, sortMode]);
+  }, [tasks, search, statusFilter, smartFilter, listFilter, showCompleted, favoritesOnly, favoriteIds, sortMode]);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -804,7 +817,7 @@ export function TasksShell() {
               <div className="min-w-0 space-y-5">
                 <div className="flex flex-col gap-3 rounded-[1.7rem] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-white/10 dark:bg-white/[0.045] lg:flex-row lg:items-center">
                   <div className="flex flex-1 gap-2 overflow-x-auto rounded-2xl bg-slate-100/80 p-1 dark:bg-white/5">{viewButtons.map(({ value, label, icon: Icon }) => <button key={value} onClick={() => setView(value)} className={`flex min-w-fit items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${view === value ? "bg-white text-slate-950 shadow-sm dark:bg-white/10 dark:text-white" : "text-slate-500 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white"}`}><Icon className="h-4 w-4" />{label}</button>)}</div>
-                  <div className="flex flex-wrap gap-2"><label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 dark:border-white/10 dark:bg-[#0b1022]"><Filter className="h-4 w-4 text-slate-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | TaskStatus)} className="task-select bg-transparent py-2.5 text-sm outline-none"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="task-select rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-white/10 dark:bg-[#0b1022]"><option value="due">Due date</option><option value="priority">Priority</option><option value="status">Status</option><option value="created">Newest</option><option value="title">Title</option></select></div>
+                  <div className="flex flex-wrap gap-2"><label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 dark:border-white/10 dark:bg-[#0b1022]"><Filter className="h-4 w-4 text-slate-400" /><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | TaskStatus)} className="task-select bg-transparent py-2.5 text-sm outline-none"><option value="all">All statuses</option>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><select value={smartFilter} onChange={(e) => setSmartFilter(e.target.value as SmartFilter)} className="task-select rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-white/10 dark:bg-[#0b1022]" aria-label="Smart task filter"><option value="all">All dates</option><option value="today">Today</option><option value="overdue">Overdue</option><option value="upcoming">Upcoming</option><option value="no_date">No date</option></select><select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="task-select rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-white/10 dark:bg-[#0b1022]"><option value="due">Due date</option><option value="priority">Priority</option><option value="status">Status</option><option value="created">Newest</option><option value="title">Title</option></select></div>
                 </div>
 
                 {view === "list" && <div className="space-y-3">{filteredTasks.map((task) => <TaskCard key={task.id} task={task} risk={taskRisks[task.id]} favorite={favoriteIds.includes(task.id)} lists={lists} categories={categories} onEdit={openEdit} onDelete={removeTask} onDuplicate={duplicateTask} onFavorite={(id) => setFavoriteIds((current) => current.includes(id) ? current.filter((value) => value !== id) : [...current, id])} onStatus={(status) => void patchTask(task.id, { status })} />)}{!filteredTasks.length && <EmptyState onAdd={() => openCreate()} />}</div>}
