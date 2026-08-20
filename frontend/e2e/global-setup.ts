@@ -1,4 +1,4 @@
-import { request, type FullConfig } from "@playwright/test";
+import { request } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -6,7 +6,7 @@ const backendUrl = "http://localhost:8010";
 const email = "e2e.user@example.com";
 const password = "E2ePass123!";
 
-export default async function globalSetup(_config: FullConfig) {
+export default async function globalSetup() {
   const authDir = path.resolve("playwright/.auth");
   await fs.mkdir(authDir, { recursive: true });
 

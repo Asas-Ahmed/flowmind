@@ -26,6 +26,7 @@ import {
 
 import { SpinnerLoader } from "@/components/common/spinner-loader";
 import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
+import { notifyNotificationDataChanged } from "@/components/notifications/notification-provider";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
 import {
@@ -190,6 +191,7 @@ export function HabitsShell() {
       }
       setFormOpen(false);
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Unable to save habit.");
     } finally {
@@ -234,6 +236,7 @@ export function HabitsShell() {
       setBusyHabitId(habit.id);
       await deleteHabit(habit.id);
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : "Unable to delete habit.");
     } finally {
@@ -487,7 +490,7 @@ export function HabitsShell() {
       <AnimatePresence>
         {formOpen && (
           <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-            <motion.div initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.98 }} className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-[2.25rem] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#080d1d] sm:rounded-[2.25rem] sm:p-7">
+            <motion.div initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.98 }} className="workspace-modal-scroll max-h-[94dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-[2.25rem] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#080d1d] sm:rounded-[2.25rem] sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600 dark:text-cyan-300">Habit builder</p><h2 className="mt-1 text-2xl font-bold">{editingHabit ? "Edit habit" : "Create a new habit"}</h2></div>
                 <button type="button" onClick={() => setFormOpen(false)} className="rounded-2xl border border-slate-200/80 bg-white p-2.5 shadow-sm transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"><X className="h-5 w-5" /></button>

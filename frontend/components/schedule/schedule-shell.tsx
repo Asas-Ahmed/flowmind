@@ -34,6 +34,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { WorkspaceNavigation } from "@/components/navigation/workspace-navigation";
 import { WorkspaceTopbar } from "@/components/navigation/workspace-topbar";
+import { notifyNotificationDataChanged } from "@/components/notifications/notification-provider";
+import { WorkspaceSidebar } from "@/components/navigation/workspace-sidebar";
 import {
   applySmartSchedule,
   createScheduleEvent,
@@ -302,6 +304,7 @@ export function ScheduleShell() {
       else await createScheduleEvent(payload);
       setModalOpen(false);
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to save event.");
     } finally {
@@ -321,6 +324,7 @@ export function ScheduleShell() {
       setSelectedDate(start);
       setMonth(start);
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to move this time block.");
       await loadWorkspace();
@@ -351,6 +355,7 @@ export function ScheduleShell() {
         reminder_minutes_before: event.reminder_minutes_before,
       });
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to duplicate event.");
     } finally {
@@ -364,6 +369,7 @@ export function ScheduleShell() {
       await deleteScheduleEvent(eventId);
       setModalOpen(false);
       await loadWorkspace();
+      notifyNotificationDataChanged();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to delete event.");
     } finally {
@@ -485,6 +491,7 @@ export function ScheduleShell() {
       setSmartResult(null);
       setSelectedSuggestions([]);
       await loadWorkspace();
+      notifyNotificationDataChanged();
       if (result.skipped_count) {
         setError(`${result.created_count} block${result.created_count === 1 ? "" : "s"} added; ${result.skipped_count} skipped because the task or time was no longer available.`);
       }
@@ -497,9 +504,11 @@ export function ScheduleShell() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#070a12] dark:text-white">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[268px] border-r border-slate-200 bg-white px-5 py-6 dark:border-white/[0.08] dark:bg-[#090d17] xl:block">
-        <WorkspaceNavigation />
-      </aside>
+      <WorkspaceSidebar
+        insightTitle="Live schedule"
+        insightText="Your calendar combines events, tasks, habits, focus sessions, and smart planning."
+        insightValue="Synced"
+      />
 
       <motion.main 
         initial={{ opacity: 0 }} 
@@ -508,7 +517,7 @@ export function ScheduleShell() {
           duration: 0.22, 
           ease: "easeOut", 
           }} 
-        className="pb-28 xl:ml-[268px] xl:pb-8"
+        className="pb-28 xl:pl-[272px] xl:pb-8"
       >
         <div className="mx-auto max-w-[1580px] px-4 pb-8 pt-6 sm:px-6 lg:px-8">
           <WorkspaceTopbar
@@ -673,7 +682,7 @@ export function ScheduleShell() {
         </div>
       )}
 
-      {modalOpen && <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><div className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-[28px] border border-white/10 bg-white p-6 shadow-2xl dark:bg-[#0b0f19]"><div className="flex items-center justify-between"><div><p className="text-lg font-bold">{editing ? "Edit event" : "Create event"}</p><p className="mt-1 text-xs text-slate-500">Add a dedicated time block to your FlowMind schedule.</p></div><button onClick={() => setModalOpen(false)} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/[0.06]"><X className="h-5 w-5" /></button></div><div className="mt-5 space-y-4"><Field label="Title"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="Deep work, class, meeting..." /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Type"><select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value as ScheduleEventType })} className="input cursor-pointer capitalize">{EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></Field><Field label="Location"><input value={form.location ?? ""} onChange={(e) => setForm({ ...form, location: e.target.value || null })} className="input" placeholder="Optional" /></Field></div><div className="grid gap-4 sm:grid-cols-2"><Field label="Starts"><input type="datetime-local" value={form.start_at} onChange={(e) => setForm({ ...form, start_at: e.target.value })} className="input cursor-pointer" /></Field><Field label="Ends"><input type="datetime-local" value={form.end_at} onChange={(e) => setForm({ ...form, end_at: e.target.value })} className="input cursor-pointer" /></Field></div><Field label="Description"><textarea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value || null })} rows={3} className="input resize-none" placeholder="Optional notes" /></Field><div><p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Color</p><div className="flex gap-2">{EVENT_COLORS.map((color) => <button key={color} onClick={() => setForm({ ...form, color })} className={`h-8 w-8 rounded-full border-4 ${form.color === color ? "border-slate-950 dark:border-white" : "border-transparent"}`} style={{ backgroundColor: color }} />)}</div></div><div className="grid gap-4 sm:grid-cols-2"><label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3 text-sm font-semibold dark:border-white/10"><input type="checkbox" checked={form.is_all_day} onChange={(e) => setForm({ ...form, is_all_day: e.target.checked })} /> All-day event</label><label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3 text-sm font-semibold dark:border-white/10"><input type="checkbox" checked={form.reminder_enabled} onChange={(e) => setForm({ ...form, reminder_enabled: e.target.checked })} /> Reminder enabled</label></div>{form.reminder_enabled && <Field label="Remind before"><select value={form.reminder_minutes_before} onChange={(e) => setForm({ ...form, reminder_minutes_before: Number(e.target.value) })} className="input cursor-pointer"><option value={0}>At start time</option><option value={5}>5 minutes</option><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={1440}>1 day</option></select></Field>}</div><div className="mt-6 flex flex-wrap items-center justify-between gap-3">{editing ? <div className="flex items-center gap-2"><button disabled={busy} onClick={() => void removeEvent(editing.id)} className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-400/10"><Trash2 className="h-4 w-4" /> Delete</button><button disabled={busy} onClick={() => void duplicateEvent(editing)} className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-400/10"><Copy className="h-4 w-4" /> Duplicate</button></div> : <span />}<button disabled={busy} onClick={() => void saveEvent()} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{busy ? "Saving..." : editing ? "Save changes" : "Create event"}</button></div></div></div>}
+      {modalOpen && <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/55 p-4 backdrop-blur-sm"><div className="workspace-modal-scroll max-h-[92dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-[28px] border border-white/10 bg-white p-6 shadow-2xl dark:bg-[#0b0f19]"><div className="flex items-center justify-between"><div><p className="text-lg font-bold">{editing ? "Edit event" : "Create event"}</p><p className="mt-1 text-xs text-slate-500">Add a dedicated time block to your FlowMind schedule.</p></div><button onClick={() => setModalOpen(false)} className="rounded-xl p-2 hover:bg-slate-100 dark:hover:bg-white/[0.06]"><X className="h-5 w-5" /></button></div><div className="mt-5 space-y-4"><Field label="Title"><input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="Deep work, class, meeting..." /></Field><div className="grid gap-4 sm:grid-cols-2"><Field label="Type"><select value={form.event_type} onChange={(e) => setForm({ ...form, event_type: e.target.value as ScheduleEventType })} className="input cursor-pointer capitalize">{EVENT_TYPES.map((type) => <option key={type}>{type}</option>)}</select></Field><Field label="Location"><input value={form.location ?? ""} onChange={(e) => setForm({ ...form, location: e.target.value || null })} className="input" placeholder="Optional" /></Field></div><div className="grid gap-4 sm:grid-cols-2"><Field label="Starts"><input type="datetime-local" value={form.start_at} onChange={(e) => setForm({ ...form, start_at: e.target.value })} className="input cursor-pointer" /></Field><Field label="Ends"><input type="datetime-local" value={form.end_at} onChange={(e) => setForm({ ...form, end_at: e.target.value })} className="input cursor-pointer" /></Field></div><Field label="Description"><textarea value={form.description ?? ""} onChange={(e) => setForm({ ...form, description: e.target.value || null })} rows={3} className="input resize-none" placeholder="Optional notes" /></Field><div><p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">Color</p><div className="flex gap-2">{EVENT_COLORS.map((color) => <button key={color} onClick={() => setForm({ ...form, color })} className={`h-8 w-8 rounded-full border-4 ${form.color === color ? "border-slate-950 dark:border-white" : "border-transparent"}`} style={{ backgroundColor: color }} />)}</div></div><div className="grid gap-4 sm:grid-cols-2"><label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3 text-sm font-semibold dark:border-white/10"><input type="checkbox" checked={form.is_all_day} onChange={(e) => setForm({ ...form, is_all_day: e.target.checked })} /> All-day event</label><label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-3 text-sm font-semibold dark:border-white/10"><input type="checkbox" checked={form.reminder_enabled} onChange={(e) => setForm({ ...form, reminder_enabled: e.target.checked })} /> Reminder enabled</label></div>{form.reminder_enabled && <Field label="Remind before"><select value={form.reminder_minutes_before} onChange={(e) => setForm({ ...form, reminder_minutes_before: Number(e.target.value) })} className="input cursor-pointer"><option value={0}>At start time</option><option value={5}>5 minutes</option><option value={15}>15 minutes</option><option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={1440}>1 day</option></select></Field>}</div><div className="mt-6 flex flex-wrap items-center justify-between gap-3">{editing ? <div className="flex items-center gap-2"><button disabled={busy} onClick={() => void removeEvent(editing.id)} className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-400/10"><Trash2 className="h-4 w-4" /> Delete</button><button disabled={busy} onClick={() => void duplicateEvent(editing)} className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-400/10"><Copy className="h-4 w-4" /> Duplicate</button></div> : <span />}<button disabled={busy} onClick={() => void saveEvent()} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50 dark:bg-white dark:text-slate-950">{busy ? "Saving..." : editing ? "Save changes" : "Create event"}</button></div></div></div>}
       <style jsx global>{` .input { width: 100%; border-radius: 1rem; border: 1px solid rgb(226 232 240); background: rgb(248 250 252); color: rgb(15 23 42); padding: 0.75rem 1rem; font-size: 0.875rem; outline: none; appearance: none; transition: border-color .2s, background-color .2s, color .2s; } .dark .input { border-color: rgba(255,255,255,.10); background: rgb(15 23 42); /* slate-900 */ color: rgb(248 250 252); } .input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,.12); } /* Fix dropdown menu in dark mode */ .dark select.input option { background: rgb(15 23 42); color: rgb(248 250 252); } .dark select.input optgroup { background: rgb(15 23 42); color: rgb(248 250 252); } `}</style>
     </div>
   );

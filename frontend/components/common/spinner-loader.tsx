@@ -22,7 +22,7 @@ export function SpinnerLoader({
       )}
     >
       <div className="flex flex-col items-center gap-3">
-        <div className="h-10 w-10 animate-spin rounded-full border-3 border-slate-200 border-t-blue-600 dark:border-slate-800 dark:border-t-cyan-300" />
+        <div className="h-10 w-10 animate-spin rounded-full border-3 border-slate-300 border-t-slate-700 dark:border-slate-800 dark:border-t-white" />
 
         {label && (
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">

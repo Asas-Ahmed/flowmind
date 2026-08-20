@@ -124,22 +124,26 @@ export function EyeCareShell() {
 
         if (phase === "work") {
           setPhase("break");
-          notify(
-            "Time for your 20-second eye break",
-            "Look at something around 20 feet away and relax your eyes.",
-          );
+          if (notificationsEnabled) {
+            notify(
+              "Time for your 20-second eye break",
+              "Look at something around 20 feet away and relax your eyes.",
+            );
+          }
           return BREAK_SECONDS;
         }
 
         setCompletedToday((count) => count + 1);
         setPhase("work");
-        notify("Eye break complete", "Your next 20-minute screen interval has started.");
+        if (notificationsEnabled) {
+          notify("Eye break complete", "Your next 20-minute screen interval has started.");
+        }
         return WORK_SECONDS;
       });
     }, 1000);
 
     return () => window.clearInterval(timer);
-  }, [phase, running]);
+  }, [notificationsEnabled, phase, running]);
 
   const totalSeconds = defaultRemaining(phase);
   const progress = useMemo(

@@ -12,7 +12,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 
-import { getScheduleWorkspace, getUserProfile } from "@/lib/api";
+import { getScheduleWorkspace, getTaskWorkspace, getUserProfile } from "@/lib/api";
 import type { UserProfile } from "@/lib/api";
 import type { ScheduleItem } from "@/types/schedule";
 
@@ -86,7 +86,10 @@ function saveSeenNotifications(seen: SeenNotifications) {
 function preferenceAllows(item: ScheduleItem, profile: UserProfile) {
   if (item.source === "task") return profile.task_reminders;
   if (item.source === "habit") return profile.habit_reminders;
-  return profile.email_notifications;
+
+  // Schedule/browser reminders are not email notifications.
+  // If the event itself has a reminder_at value, browser permission controls delivery.
+  return true;
 }
 
 function notificationCopy(item: ScheduleItem) {
@@ -140,13 +143,40 @@ export function NotificationProvider({ children }: { children?: ReactNode }) {
     rangeEnd.setDate(rangeEnd.getDate() + 7);
 
     try {
-      const [profile, workspace] = await Promise.all([
+      const [profile, workspace, taskWorkspace] = await Promise.all([
         getUserProfile(),
         getScheduleWorkspace(dateKey(rangeStart), dateKey(rangeEnd)),
+        getTaskWorkspace(),
       ]);
 
+      // Do not depend only on the Schedule workspace for task reminders.
+      // That workspace is filtered primarily by task due dates, so reminders for
+      // tasks without a nearby due date can otherwise be missed completely.
+      const taskReminderItems: ScheduleItem[] = taskWorkspace.tasks
+        .filter((task) => task.reminder_enabled && task.reminder_at)
+        .filter((task) => task.status !== "completed")
+        .map((task) => ({
+          id: `task-${task.id}`,
+          source: "task",
+          source_id: task.id,
+          title: task.title,
+          description: task.description,
+          start_at: task.start_at ?? task.due_at ?? task.reminder_at as string,
+          end_at: task.due_at,
+          is_all_day: task.is_all_day,
+          color: "#4a6ded",
+          status: task.status,
+          reminder_at: task.reminder_at,
+          location: null,
+        }));
+
+      const mergedItems = [
+        ...workspace.items.filter((item) => item.source !== "task"),
+        ...taskReminderItems,
+      ];
+
       const nowMs = Date.now();
-      const visibleItems = workspace.items
+      const visibleItems = mergedItems
         .filter((item) => item.reminder_at)
         .filter((item) => preferenceAllows(item, profile))
         .filter((item) => !(item.source === "task" && item.status === "completed"))
@@ -265,8 +295,8 @@ export function NotificationProvider({ children }: { children?: ReactNode }) {
         const copy = notificationCopy(item);
         const notification = new Notification(copy.title, {
           body: copy.body,
-          icon: "/favicon.ico",
-          badge: "/favicon.ico",
+          icon: "/brand/flowmind-icon-192.png",
+          badge: "/brand/flowmind-icon-192.png",
           tag: marker,
           requireInteraction: item.source === "task",
         });

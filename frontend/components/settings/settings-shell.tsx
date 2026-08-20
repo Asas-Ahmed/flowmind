@@ -21,6 +21,7 @@ import {
   Sparkles,
   Target,
   UserRound,
+  BellRing,
 } from "lucide-react";
 
 import { SpinnerLoader } from "@/components/common/spinner-loader";
@@ -146,6 +147,30 @@ function PreferenceToggle({
 }
 
 export function SettingsShell() {
+
+  async function sendTestNotification() {
+    if (typeof Notification === "undefined") {
+      alert("Browser notifications are not supported on this device.");
+      return;
+    }
+
+    let permission = Notification.permission;
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== "granted") {
+      alert("Notifications are blocked. Please allow them in your browser/site settings first.");
+      return;
+    }
+
+    new Notification("FlowMind test notification", {
+      body: "Notifications are working correctly on this device.",
+      icon: "/brand/flowmind-icon-192.png",
+      badge: "/brand/flowmind-icon-192.png",
+    });
+  }
+
   const router = useRouter();
   const {
     enabledCount,
@@ -335,7 +360,16 @@ export function SettingsShell() {
               </div>
             </div>
           )}
-        </section>
+        
+          <button
+            type="button"
+            onClick={sendTestNotification}
+            className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-500/10 px-4 py-2.5 text-sm font-bold text-violet-700 transition hover:bg-violet-500/15 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200 dark:hover:bg-violet-400/15"
+          >
+            <BellRing className="h-4 w-4" />
+            Send test notification
+          </button>
+</section>
 
         <form
           onSubmit={handleSubmit}

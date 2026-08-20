@@ -44,6 +44,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import { FlowMindLogo } from "@/components/brand/flowmind-logo";
+import { SpinnerLoader } from "@/components/common/spinner-loader";
 import { useFeaturePreferences } from "@/lib/feature-preferences";
 
 type NavigationCountKey = "tasks" | "habits";
@@ -230,6 +231,7 @@ export function WorkspaceNavigation({
   const pathname = usePathname();
   const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const { isFeatureEnabled } = useFeaturePreferences();
   const visibleNavigationGroups = useMemo(
     () =>
@@ -297,8 +299,24 @@ export function WorkspaceNavigation({
 
   const navigateTo = (href: string) => {
     setMoreOpen(false);
+
+    if (href === pathname) {
+      setPendingHref(null);
+      return;
+    }
+
+    setPendingHref(href);
     router.push(href);
   };
+
+  const showRouteLoader = pendingHref !== null && pendingHref !== pathname;
+  const routeLoader = showRouteLoader ? (
+    <SpinnerLoader
+      fullScreen
+      label="Loading FlowMind..."
+      className="fixed inset-0 z-[100] bg-slate-50 dark:bg-[#050711]"
+    />
+  ) : null;
 
   if (variant === "mobile") {
     const primaryLabels = ["Dashboard", "Tasks", "Habits", "Focus"];
@@ -312,6 +330,7 @@ export function WorkspaceNavigation({
 
     return (
       <>
+        {routeLoader}
         <AnimatePresence>
           {moreOpen && (
             <div className="fixed inset-0 z-[60] xl:hidden">
@@ -416,9 +435,11 @@ export function WorkspaceNavigation({
   };
 
   return (
-    <div className={className}>
+    <>
+      {routeLoader}
+      <div className={className}>
       {showBrand && (
-        <button type="button" onClick={() => router.push("/dashboard")} aria-label="Open FlowMind dashboard" className="mb-5 block rounded-xl p-1 transition-opacity hover:opacity-80">
+        <button type="button" onClick={() => navigateTo("/dashboard")} aria-label="Open FlowMind dashboard" className="mb-5 block rounded-xl p-1 transition-opacity hover:opacity-80">
           <FlowMindLogo size="md" variant="full" href="" />
         </button>
       )}
@@ -457,7 +478,7 @@ export function WorkspaceNavigation({
                     <motion.div initial={group.collapsible ? { height: 0, opacity: 0 } : false} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2, ease: "easeOut" }} className="overflow-hidden">
                       <div className={`${group.collapsible ? "mt-1 space-y-1" : "space-y-1"}`}>
                         {group.items.map((item) => (
-                          <DesktopNavigationItem key={item.label} item={item} active={isActiveRoute(pathname, item.href)} count={item.countKey ? counts[item.countKey] : undefined} onNavigate={router.push} activeItemRef={activeDesktopItemRef} />
+                          <DesktopNavigationItem key={item.label} item={item} active={isActiveRoute(pathname, item.href)} count={item.countKey ? counts[item.countKey] : undefined} onNavigate={navigateTo} activeItemRef={activeDesktopItemRef} />
                         ))}
                       </div>
                     </motion.div>
@@ -469,5 +490,6 @@ export function WorkspaceNavigation({
         </nav>
       </div>
     </div>
+    </>
   );
 }

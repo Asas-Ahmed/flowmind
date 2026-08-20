@@ -326,7 +326,7 @@ export function TimeTrackingShell() {
       {(manualOpen || projectOpen) && <button type="button" aria-label="Close dialog" onClick={() => { setManualOpen(false); setProjectOpen(false); setEditEntry(null); }} className="fixed inset-0 z-[80] bg-slate-950/55 backdrop-blur-sm" />}
 
       {manualOpen && (
-        <div className="fixed inset-x-3 top-1/2 z-[90] mx-auto max-h-[90dvh] max-w-2xl -translate-y-1/2 overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0b0f19] sm:p-6">
+        <div className="fixed inset-x-3 top-1/2 z-[90] mx-auto workspace-modal-scroll max-h-[90dvh] max-w-2xl -translate-y-1/2 overflow-y-auto overscroll-contain rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#0b0f19] sm:p-6">
           <div className="flex items-start justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-indigo-600 dark:text-cyan-300">{editEntry ? "Edit record" : "Manual mode"}</p><h2 className="mt-1 text-2xl font-black">{editEntry ? "Update time entry" : "Add tracked time"}</h2></div><button type="button" onClick={() => { setManualOpen(false); setEditEntry(null); }} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06]"><X className="h-5 w-5" /></button></div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="sm:col-span-2"><span className="text-sm font-bold">Activity</span><input value={manualForm.description} onChange={(event) => setManualForm({ ...manualForm, description: event.target.value })} className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 outline-none dark:border-white/10 dark:bg-[#111522]" /></label>

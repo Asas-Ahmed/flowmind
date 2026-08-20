@@ -70,6 +70,14 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+
+function liveElapsedSeconds(session: FocusSession) {
+  if (session.status !== "active") return session.elapsed_seconds;
+  const anchor = new Date(session.updated_at || session.started_at).getTime();
+  if (!Number.isFinite(anchor)) return session.elapsed_seconds;
+  return session.elapsed_seconds + Math.max(0, Math.floor((Date.now() - anchor) / 1000));
+}
+
 function modeLabel(mode: FocusMode) {
   if (mode === "short_break") return "Short break";
   if (mode === "long_break") return "Long break";
@@ -115,7 +123,7 @@ export function FocusShell() {
         setTitle(data.active_session.title);
         setMode(data.active_session.mode);
         setMinutes(data.active_session.planned_minutes);
-        setElapsed(data.active_session.elapsed_seconds);
+        setElapsed(liveElapsedSeconds(data.active_session));
         setRunning(data.active_session.status === "active");
       }
     } catch (requestError) {
@@ -136,7 +144,7 @@ export function FocusShell() {
           setTitle(data.active_session.title);
           setMode(data.active_session.mode);
           setMinutes(data.active_session.planned_minutes);
-          setElapsed(data.active_session.elapsed_seconds);
+          setElapsed(liveElapsedSeconds(data.active_session));
           setRunning(data.active_session.status === "active");
         }
       })

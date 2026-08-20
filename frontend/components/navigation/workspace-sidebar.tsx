@@ -39,14 +39,14 @@ export function WorkspaceSidebar({
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 flex-1 text-sm font-semibold leading-5 text-slate-900 dark:text-white" title={insightTitle}>
                     {insightTitle}
                   </p>
 
-                  <span className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                    {insightValue}
+                  <span className="flex max-w-[88px] shrink-0 items-center gap-1.5 text-right text-[9px] font-semibold uppercase leading-4 tracking-[0.1em] text-slate-500 dark:text-slate-400" title={insightValue}>
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    <span className="break-words">{insightValue}</span>
                   </span>
                 </div>
 
@@ -62,11 +62,11 @@ export function WorkspaceSidebar({
       <style jsx>{`
         .workspace-sidebar-scroll {
           scrollbar-width: thin;
-          scrollbar-color: rgb(148 163 184 / 0.28) transparent;
+          scrollbar-color: rgb(100 116 139 / 0.55) transparent;
         }
 
         .workspace-sidebar-scroll::-webkit-scrollbar {
-          width: 4px;
+          width: 7px;
         }
 
         .workspace-sidebar-scroll::-webkit-scrollbar-track {
@@ -75,20 +75,20 @@ export function WorkspaceSidebar({
 
         .workspace-sidebar-scroll::-webkit-scrollbar-thumb {
           border-radius: 999px;
-          background: rgb(148 163 184 / 0.28);
+          background: rgb(100 116 139 / 0.45);
         }
 
         .workspace-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgb(100 116 139 / 0.42);
+          background: rgb(71 85 105 / 0.72);
         }
 
         :global(.dark) .workspace-sidebar-scroll {
-          scrollbar-color: rgb(255 255 255 / 0.12) transparent;
+          scrollbar-color: rgb(148 163 184 / 0.42) transparent;
         }
 
         :global(.dark)
           .workspace-sidebar-scroll::-webkit-scrollbar-thumb {
-          background: rgb(255 255 255 / 0.12);
+          background: rgb(148 163 184 / 0.38);
         }
       `}</style>
     </aside>
