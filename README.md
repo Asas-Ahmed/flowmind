@@ -116,6 +116,14 @@ FlowMind treats wellbeing signals as productivity context rather than medical di
 
 ---
 
+## 📚 Documentation
+
+Looking to get started with FlowMind or explore its features in detail?
+
+- 📖 **[FlowMind User Manual](docs/user-manual/USER_MANUAL.md)** - Complete guide covering installation, account setup, workspace navigation, productivity features, AI task-risk prediction, Smart Scheduling, notifications, PWA installation, settings, and troubleshooting.
+
+---
+
 ## Machine Learning
 
 FlowMind includes a trained and explainable task-risk model that estimates whether a task is likely to be completed before its deadline.
